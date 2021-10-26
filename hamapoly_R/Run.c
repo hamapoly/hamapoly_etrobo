@@ -105,6 +105,8 @@ float math_limit(float n, float min, float max)
 /******************************************************************************************************************************************/
 void motor_ctrl(int8_t power, int16_t turn)
 {
+    turn = turn * -1;   // Rコース用の変換処理
+
     run_power = power;  // 計測用の変数を更新
     run_turn = turn;    // 計測用の変数を更新
 
@@ -389,6 +391,8 @@ void Run_setDirection(int8_t power, int16_t turn, float direction)
     Direction_update();                                             // 方位を更新
     float ref_direction = Direction_getDirection();                 // 処理開始時点での方位を取得
     
+    direction = direction * -1; // Rコース用の変換処理
+    
     if(power != 0 && turn > 0 && direction > 0)                     // 右旋回の場合
     {
         while(1)                                                        // モーターが停止するまでループ
@@ -587,6 +591,8 @@ int8_t Run_getTurn_change(int8_t current_turn, int8_t target_turn, float change_
 /******************************************************************************************************************************************/
 void motor_ctrl_alt(int8_t power, int16_t turn, float change_rate)
 {
+    turn = turn * -1;   // Rコース用の変換処理
+
     power = Run_getPower_change(run_power, power, change_rate); // 出力調整
     run_power = power;  // 計測用の変数を更新
     run_turn = turn;    // 計測用の変数を更新
