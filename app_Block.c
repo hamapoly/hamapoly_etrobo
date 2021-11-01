@@ -197,7 +197,7 @@ void Block_task()
                 }
                 else
                 {
-                    turn = Run_getTurn_sensorPID(rgb.r, 49);    // PID制御を用いて旋回値を取得
+                    turn = Run_getTurn_sensorPID(rgb.r, 48);    // PID制御を用いて旋回値を取得
                     motor_ctrl_alt(10, turn * -1, 0.5);         // 加速しつつライントレース走行
                 }
 
