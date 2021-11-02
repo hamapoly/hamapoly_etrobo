@@ -25,6 +25,9 @@ void Line_task()
 
     float temp = 0.0;   // 距離、方位の一時保存用
 
+    float distance = 0.0;   // 走行距離
+    float direction = 0.0;  // 方位
+
     int8_t flag = 0;
     int8_t power = MOTOR_POWER;
 
