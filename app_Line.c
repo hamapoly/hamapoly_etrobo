@@ -59,12 +59,18 @@ void Line_task()
                 break;
 
             case MOVE: // 通常走行 *****************************************************************
-                turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
-
-                if(-50 < turn && turn < 50)             // 旋回量が少ない場合
-                    motor_ctrl_alt(power, turn, 0.5);       // 加速して走行
-                else                                    // 旋回量が多い場合
-                    motor_ctrl_alt(70, turn, 0.5);          // 減速して走行
+                
+                if(distance < temp + 1500)
+                {
+                    if(direction < 240)
+                    {
+                        motor_ctrl_alt(50, 10, 0.4);
+                    }
+                    else
+                    {
+                        motor_ctrl(50, 10);
+                    }
+                }
 
                 if(Distance_getDistance() > 10000 && rgb.r < 75 && rgb.g < 95 && rgb.b > 120)    // 2つ目の青ラインを検知
                 {
