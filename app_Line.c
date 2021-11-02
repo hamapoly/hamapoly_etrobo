@@ -12,6 +12,11 @@ static const sensor_port_t
 typedef enum {
     START,
     MOVE,
+    MOVE1,
+    MOVE2,
+    MOVE3,
+    MOVE4,
+    LINETRACE,
     END
     } RUN_STATE;
 
@@ -25,10 +30,8 @@ void Line_task()
 
     float temp = 0.0;   // 距離、方位の一時保存用
 
-    float distance = 0.0;   // 走行距離
-    float direction = 0.0;  // 方位
-
     int8_t flag = 0;
+    int8_t flag_line[] = {0, 0, 0, 0};
     int8_t power = MOTOR_POWER;
 
     int16_t turn = 0;
@@ -48,13 +51,9 @@ void Line_task()
     {
         /* 値の更新 **********************************************************************************************/
         // 周期ハンドラによる取得値も利用できるが、精度を求める場合は使用直前に値を更新した方が良いと思われる
+        ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
         Distance_update();
         Direction_update();
-
-        distance = Distance_getDistance();      // 走行距離を取得
-        direction = Direction_getDirection();   // 方位を取得
-
-        ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
         /********************************************************************************************************/
 
         if(flag == 1)   // 終了フラグを確認
@@ -68,21 +67,125 @@ void Line_task()
                 break;
 
             case MOVE: // 通常走行 *****************************************************************
-                motor_ctrl(100, 0);
+                motor_ctrl_alt(100, 0, 0.2);
 
-                if(distance > 1500)
+                if(Distance_getDistance() > 1850 && flag_line[0] == 0)
                 {
-                    if(direction < 240)
+                    r_state = MOVE1;
+                }
+                else if(Distance_getDistance() > 2900 && flag_line[1] == 0)
+                {
+                    r_state = MOVE2;
+                }
+                else if(Distance_getDistance() > 3750 && flag_line[2] == 0)
+                {
+                    r_state = MOVE3;
+                }
+                else if(Distance_getDistance() > 5750 && flag_line[3] == 0)
+                {
+                    r_state = MOVE4;
+                }
+                // else if(Distance_getDistance() > 8500)
+                // {
+                //     motor_ctrl(50, 0);
+                //     if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)
+                //     {
+                //         r_state = LINETRACE;
+                //     }
+                // }
+            
+                break;
+
+            case MOVE1: // カーブ１走行 *****************************************************************
+                if(Direction_getDirection() > -80)
+                {
+                    motor_ctrl(100, -50);        
+                }
+                else
+                {
+                    flag_line[0] = 1;
+                    r_state = MOVE;
+                }
+
+                break;
+
+            case MOVE2: // カーブ2走行 *****************************************************************
+                if(Direction_getDirection() > -220)
+                {
+                    motor_ctrl(100, -65);
+                }
+                else
+                {
+                    flag_line[1] = 1;
+                    r_state = MOVE;
+                }
+
+                break;
+
+            case MOVE3: // カーブZ字走行 *****************************************************************                
+                if(Distance_getDistance() < 4300 && Direction_getDirection() < -170)
+                {
+                    motor_ctrl(100, 65);                   
+                }
+                else if(Distance_getDistance() < 4400)
+                {
+                    motor_ctrl(100, 0);
+                }
+                else if(Distance_getDistance() < 4800 && Direction_getDirection() < -40)
+                {
+                    motor_ctrl(100, 70);
+                }
+                else if(Distance_getDistance() < 4900)
+                {
+                    motor_ctrl(100, 0);
+                }
+                else if(Direction_getDirection() > -155)
+                {
+                    motor_ctrl(100, -70);
+                }
+                else
+                {
+                    flag_line[2] = 1;
+                    r_state = MOVE;
+                }
+
+                break;
+
+            case MOVE4: // カーブ4走行 *****************************************************************
+
+                if(Distance_getDistance() < 6100 && Direction_getDirection() > -230)
+                {
+                   motor_ctrl(100, -70);
+                }
+                else if(Distance_getDistance() < 6200)
+                {
+                    motor_ctrl(100, 0);
+                }
+                else if(Direction_getDirection() < -90)
+                {
+                    motor_ctrl(100, 55);
+                }
+                else
+                {
+                    motor_ctrl(100, 18);
+                    if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)
                     {
-                        motor_ctrl_alt(100, 10, 0.4);
-                    }
-                    else
-                    {
-                        motor_ctrl_alt(100, 10, 0.4);
+                        flag_line[3] = 1;
+                        r_state = LINETRACE;
                     }
                 }
 
-                if(Distance_getDistance() > 10000 && rgb.r < 75 && rgb.g < 95 && rgb.b > 120)    // 2つ目の青ラインを検知
+                break;
+
+            case LINETRACE:
+                turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
+
+                if(-50 < turn && turn < 50)             // 旋回量が少ない場合
+                    motor_ctrl_alt(90, turn, 0.5);       // 加速して走行
+                else                                    // 旋回量が多い場合
+                    motor_ctrl_alt(50, turn, 0.5);          // 減速して走行
+
+                if(rgb.r < 75 && rgb.g < 95 && rgb.b > 120 && Distance_getDistance() > 9000)    // 2つ目の青ラインを検知
                 {
                     temp = Distance_getDistance();  // 検知時点でのdistanceを仮置き
                     log_stamp("\n\n\tBlue detected\n\n\n");
