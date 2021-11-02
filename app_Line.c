@@ -85,14 +85,14 @@ void Line_task()
                 {
                     r_state = CURVE_4;
                 }
-                else if(Distance_getDistance() > 8500)
-                {
-                    motor_ctrl(50, 0);
-                    if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)
-                    {
-                        r_state = LINETRACE;
-                    }
-                }
+                // else if(Distance_getDistance() > 8500)
+                // {
+                //     motor_ctrl(50, 0);
+                //     if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)
+                //     {
+                //         r_state = LINETRACE;
+                //     }
+                // }
             
                 break;
 
@@ -157,20 +157,23 @@ void Line_task()
                 {
                    motor_ctrl(100, -70);
                 }
-                else if(Distance_getDistance() < 6250)
+                else if(Distance_getDistance() < 6200)
                 {
                     motor_ctrl(100, 0);
                 }
                 else if(Direction_getDirection() < -90)
                 {
-                    motor_ctrl(100, 65);
+                    motor_ctrl(100, 55);
                 }
                 else
                 {
-                    flag_line[3] = 1;
-                    r_state = MOVE;
+                    motor_ctrl(100, 18);
+                    if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)
+                    {
+                        flag_line[3] = 1;
+                        r_state = LINETRACE;
+                    }
                 }
-
 
                 break;
 
@@ -178,11 +181,11 @@ void Line_task()
                 turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
 
                 if(-50 < turn && turn < 50)             // 旋回量が少ない場合
-                    motor_ctrl_alt(50, turn, 0.5);       // 加速して走行
+                    motor_ctrl_alt(90, turn, 0.5);       // 加速して走行
                 else                                    // 旋回量が多い場合
                     motor_ctrl_alt(50, turn, 0.5);          // 減速して走行
 
-                if(rgb.r < 75 && rgb.g < 95 && rgb.b > 120)    // 2つ目の青ラインを検知
+                if(rgb.r < 75 && rgb.g < 95 && rgb.b > 120 && Distance_getDistance() > 9000)    // 2つ目の青ラインを検知
                 {
                     temp = Distance_getDistance();  // 検知時点でのdistanceを仮置き
                     log_stamp("\n\n\tBlue detected\n\n\n");
