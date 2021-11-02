@@ -68,16 +68,17 @@ void Line_task()
                 break;
 
             case MOVE: // 通常走行 *****************************************************************
-                
-                if(distance < temp + 1500)
+                motor_ctrl(100, 0);
+
+                if(distance > 1500)
                 {
                     if(direction < 240)
                     {
-                        motor_ctrl_alt(50, 10, 0.4);
+                        motor_ctrl_alt(100, 10, 0.4);
                     }
                     else
                     {
-                        motor_ctrl(50, 10);
+                        motor_ctrl_alt(100, 10, 0.4);
                     }
                 }
 
