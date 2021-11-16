@@ -97,6 +97,8 @@ static rgb_raw_t rgb;
 static int8_t logflag = 0;
 
 typedef enum {
+    NORMAL,
+    TEST,   //　テスト用
     LINE,   // ライントレース区間
     SLALOM, // スラローム区間
     BLOCK,  // ブロック搬入区間
@@ -104,7 +106,7 @@ typedef enum {
 } TASK_STATE;
 
 //変更テスト
-static TASK_STATE t_state = LINE;
+static TASK_STATE t_state = NORMAL;
 /*************************************************************************************************************************************************/
 
 /* 下記のマクロは個体/環境に合わせて変更する必要があります */
@@ -242,6 +244,21 @@ void main_task(intptr_t unused)
         // ブロック搬入区間     ：シミュレータ設定位置 [X = 左エッジ24.3 | 右エッジ24.1, Y = 0.0, Z = 8.0, R = 180]
         switch(t_state)
         {
+            case NORMAL: // カラーセンサ比較 *****************************************************************
+
+                log_open("Log_Line.txt");
+    
+                motor_ctrl(0, 0);
+
+                t_state = TEST;
+                break;
+                
+            case TEST:
+
+                Run_setDistance(50, 0, 100);
+            
+                break;
+
             case LINE:
                 log_open("Log_Line.txt");    // txtファイル出力処理
 
@@ -277,8 +294,8 @@ void main_task(intptr_t unused)
         }
         tslp_tsk(4 * 1000U); /* 4msec周期起動 */
 
-        logflag = 0;        // ファイル書き込み停止フラグ(周期ハンドラ用)
-        fclose(outputfile); // txtファイル出力終了
+        // logflag = 0;        // ファイル書き込み停止フラグ(周期ハンドラ用)
+        // fclose(outputfile); // txtファイル出力終了
     }
     /**
     * Main loop END ***********************************************************************************************************************************
@@ -409,7 +426,7 @@ static void log_open(char *filename)
         printf("cannot open\n");            // エラーメッセージを出して
         exit(1);                            // 異常終了
     }
-    fprintf(outputfile, "R\tG\tB\tDistance\tDirection\tAngle\tPower\tTurn\tTime\n");     // データの項目名をファイルに書き込み
+    fprintf(outputfile, "R\tG\tB\tDistance\tDirection\tAngle\tPower\tTurn\tSampling\tSpeed\t\tTime\n");     // データの項目名をファイルに書き込み
 
     logflag = 1;    // ファイル書き込みフラグ
 }
@@ -451,12 +468,15 @@ void measure_task(intptr_t unused)
     Run_update();       // 時間、RGB値、位置角度を更新
     Distance_update();  // 距離を更新
     Direction_update(); // 方位を更新
+    speed_update();     //　速度を更新
+    sensor_update(getRGB_R());    //　センサの周期を更新
 
     // logflag = 1;        // ファイル書き込みフラグ
 
     if(logflag == 1)    // ファイル書き込みフラグを確認
     {
-        fprintf(outputfile, "%d\t%d\t%d\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%6dms\n", // txtファイル書き込み処理
+        
+        fprintf(outputfile, "%d\t%d\t%d\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%-5d\t\t%5.1f[cm/s]\t%6d[ms]\n", // txtファイル書き込み処理
          getRGB_R(),
          getRGB_G(),
          getRGB_B(),
@@ -465,6 +485,15 @@ void measure_task(intptr_t unused)
          Run_getAngle(),
          Run_getPower(),
          Run_getTurn(),
+         Run_getSamplingTime() / 1000,     //　センサのサンプリング周期を取得し、[ms]に変換する
+         Run_getSpeed() * 10,      //　速度を計測し、[cm/s]に変換する
         Run_getTime() * 5);
     }
+    // if(ev3_touch_sensor_is_pressed(touch_sensor) == 1)
+    // {
+    //     logflag = 0;
+    //     fclose(outputfile); // txtファイル出力終了
+    //     motor_ctrl(0, 0);
+        
+    // }
 }
