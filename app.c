@@ -255,7 +255,9 @@ void main_task(intptr_t unused)
                 
             case TEST:
 
-                Run_setDistance(50, 0, 100);
+                Run_setDistance(70, 0, 300);
+
+                fclose(outputfile); // txtファイル出力終了
             
                 break;
 
@@ -426,7 +428,7 @@ static void log_open(char *filename)
         printf("cannot open\n");            // エラーメッセージを出して
         exit(1);                            // 異常終了
     }
-    fprintf(outputfile, "R\tG\tB\tDistance\tDirection\tAngle\tPower\tTurn\tSampling\tSpeed\t\tTime\n");     // データの項目名をファイルに書き込み
+    fprintf(outputfile, "R\tG\tB\tDistance[cm]\tDirection[°]\tAngle\tTurn\tPower\tSpeed[cm/s]\tSampling[ms]\tTime[ms]\n");     // データの項目名をファイルに書き込み
 
     logflag = 1;    // ファイル書き込みフラグ
 }
@@ -476,19 +478,20 @@ void measure_task(intptr_t unused)
     if(logflag == 1)    // ファイル書き込みフラグを確認
     {
         
-        fprintf(outputfile, "%d\t%d\t%d\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%-5d\t\t%5.1f[cm/s]\t%6d[ms]\n", // txtファイル書き込み処理
+        fprintf(outputfile, "%u\t%u\t%u\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%5.1f\t\t%u\t\t%6u\n", // txtファイル書き込み処理
          getRGB_R(),
          getRGB_G(),
          getRGB_B(),
-         Distance_getDistance(),    // 走行距離を取得
-         Direction_getDirection(),  // 方位を取得(右旋回が正転)
+         Distance_getDistance(),        // 走行距離[cm]を取得
+         Direction_getDirection(),      // 方位を取得(右旋回が正転)
          Run_getAngle(),
-         Run_getPower(),
          Run_getTurn(),
-         Run_getSamplingTime() / 1000,     //　センサのサンプリング周期を取得し、[ms]に変換する
-         Run_getSpeed() * 10,      //　速度を計測し、[cm/s]に変換する
-        Run_getTime() * 5);
+         Run_getPower(),                //　モータの出力値
+         Run_getSpeed() * 10,                //　速度を計測し、[cm/s]に変換する
+         Run_getSamplingTime() / 1000,  //　センサのサンプリング周期を取得し、[ms]に変換する 
+        Run_getTime() * 5 );
     }
+    
     // if(ev3_touch_sensor_is_pressed(touch_sensor) == 1)
     // {
     //     logflag = 0;

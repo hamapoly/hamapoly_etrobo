@@ -74,8 +74,8 @@ uint32_t Run_getTime(void){ // 走行時間を取得(5ms単位) <- 周期ハン�
     return run_time;
 }
 
-SYSTIM Run_getSamplingTime(void){    // センサのサンプリング周期を取得
-    return sampling_time;
+uint32_t Run_getSamplingTime(void){    // センサのサンプリング周期を取得
+    return (uint32_t)sampling_time;
 }
 
 float Run_getSpeed(void){           // 100[ms]ごとの速度を取得
@@ -718,17 +718,16 @@ void sensor_update(uint16_t now_value)
 }
 
 /* 速度計測関数***********************************************/
-void speed_update(void)
+float speed_update(void)
 {
-    static uint32_t pre_time = 0, now_time = 0;
-    float pre_distance = 0.0;
-
-    now_time = Run_getTime();
-
-    if((now_time - pre_time) >= 20)
+    static uint32_t pre_time = 0;
+    static float pre_distance = 0.0;
+    
+    if((Run_getTime() - pre_time) >= 20)
     {
-        speed = (Distance_getDistance() - pre_distance);
-        pre_time = now_time;
+        speed = (Distance_getDistance() - (float)pre_distance);
+        pre_time = Run_getTime();
         pre_distance = Distance_getDistance();
     }
+    return speed;
 }

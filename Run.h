@@ -23,6 +23,8 @@ int16_t  Run_getAngle();
 int8_t   Run_getPower();
 int16_t  Run_getTurn();
 uint32_t Run_getTime();
+uint32_t Run_getSamplingTime();
+float Run_getSpeed();
 
 // 返り値の最大・最小値を制限する関数
 float   math_limit(float n, float min, float max);
@@ -74,5 +76,9 @@ int8_t  sampling_sonic(void);
 
 // サンプリングを用いた直進検知関数
 int8_t  sampling_turn(int16_t turn);
+
+void sensor_update(uint16_t now_value);
+
+float speed_update(void);
 
 #endif
