@@ -246,7 +246,7 @@ void main_task(intptr_t unused)
         {
             case NORMAL: // カラーセンサ比較 *****************************************************************
 
-                log_open("Log_Line.txt");
+                log_open("Log_compareTest.txt");
     
                 motor_ctrl(0, 0);
 
@@ -256,8 +256,6 @@ void main_task(intptr_t unused)
             case TEST:
 
                 Run_setDistance(70, 0, 300);
-
-                fclose(outputfile); // txtファイル出力終了
             
                 break;
 
@@ -467,6 +465,8 @@ void logfile_task(intptr_t unused)
     // CRE_CYCの記述については workspace > periodic-task を参考
 void measure_task(intptr_t unused)
 {
+    static int8_t flag = 0;
+
     Run_update();       // 時間、RGB値、位置角度を更新
     Distance_update();  // 距離を更新
     Direction_update(); // 方位を更新
@@ -487,16 +487,19 @@ void measure_task(intptr_t unused)
          Run_getAngle(),
          Run_getTurn(),
          Run_getPower(),                //　モータの出力値
-         Run_getSpeed() * 10,                //　速度を計測し、[cm/s]に変換する
+         Run_getSpeed(),                //　速度を計測し、[cm/s]に変換する
          Run_getSamplingTime() / 1000,  //　センサのサンプリング周期を取得し、[ms]に変換する 
         Run_getTime() * 5 );
     }
     
-    // if(ev3_touch_sensor_is_pressed(touch_sensor) == 1)
-    // {
-    //     logflag = 0;
-    //     fclose(outputfile); // txtファイル出力終了
-    //     motor_ctrl(0, 0);
-        
-    // }
+    if(flag <= 20){
+        flag++;
+    }
+    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 20)
+    {
+        logflag = 0;
+        fclose(outputfile); // txtファイル出力終了
+        motor_ctrl(0, 0);
+        t_state = GOAL;
+    }
 }
