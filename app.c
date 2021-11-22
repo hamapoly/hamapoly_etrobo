@@ -96,6 +96,8 @@ static rgb_raw_t rgb;
 
 static int8_t logflag = 0;
 
+uint8_t reflect = 0;
+
 typedef enum {
     NORMAL,
     TEST,   //　テスト用
@@ -149,7 +151,6 @@ void main_task(intptr_t unused)
 
     /* 追加：ローカル変数 *************************************************************************************/
     int16_t turn = 0;
-    
 
     /********************************************************************************************************/
 
@@ -251,13 +252,15 @@ void main_task(intptr_t unused)
                 log_open("Log_compareTest.txt");
     
                 motor_ctrl(0, 0);
+                reflect = ev3_color_sensor_get_reflect(color_sensor);
+                tslp_tsk(50 * 1000U);
 
                 t_state = TEST;
                 break;
                 
             case TEST:
-                ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);
-                turn = Run_getTurn_sensorPID(rgb.r, 64);    // PID制御で旋回量を算出
+                reflect = ev3_color_sensor_get_reflect(color_sensor);
+                turn = Run_getTurn_sensorPID(reflect, 16);    // PID制御で旋回量を算出
 
                 motor_ctrl(50, turn);
             
@@ -428,7 +431,7 @@ static void log_open(char *filename)
         printf("cannot open\n");            // エラーメッセージを出して
         exit(1);                            // 異常終了
     }
-    fprintf(outputfile, "R\tG\tB\tDistance[cm]\tDirection[°]\tAngle\tTurn\tPower\tSpeed[cm/s]\tSampling[ms]\tTime[ms]\n");     // データの項目名をファイルに書き込み
+    fprintf(outputfile, "ref\tDistance[cm]\tDirection[°]\tAngle\tTurn\tPower\tSpeed[cm/s]\tSampling[ms]\tTime[ms]\n");     // データの項目名をファイルに書き込み
 
     logflag = 1;    // ファイル書き込みフラグ
 }
@@ -469,21 +472,20 @@ void measure_task(intptr_t unused)
 {
     static int8_t flag = 0;
 
+    reflect = ev3_color_sensor_get_reflect(color_sensor);
     Run_update();       // 時間、RGB値、位置角度を更新
     Distance_update();  // 距離を更新
     Direction_update(); // 方位を更新
     speed_update();     //　速度を更新
-    sensor_update(getRGB_R());    //　センサの周期を更新
+    sensor_update(reflect);    //　センサの周期を更新
 
     // logflag = 1;        // ファイル書き込みフラグ
 
     if(logflag == 1)    // ファイル書き込みフラグを確認
     {
         
-        fprintf(outputfile, "%u\t%u\t%u\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%5.1f\t\t%u\t\t%6u\n", // txtファイル書き込み処理
-         getRGB_R(),
-         getRGB_G(),
-         getRGB_B(),
+        fprintf(outputfile, "%u\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%5.1f\t\t%u\t\t%6u\n", // txtファイル書き込み処理
+         reflect,
          Distance_getDistance() / 10,        // 走行距離[cm]を取得
          Direction_getDirection(),      // 方位を取得(右旋回が正転)
          Run_getAngle(),

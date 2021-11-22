@@ -521,7 +521,7 @@ void Run_PID_init()
 //
 // 返り値       : motor_ctrl関数のturn値(-200 ~ +200)
 /*******************************************************************************************************/
-int16_t Run_getTurn_sensorPID(uint16_t sensor_val, uint16_t target_val)    // センサー値, センサーの目標値
+int16_t Run_getTurn_sensorPID(uint8_t sensor_val, uint8_t target_val)    // センサー値, センサーの目標値
 {
     float p, i, d;
 
@@ -703,7 +703,7 @@ int8_t sampling_turn(int16_t turn)
 
 
 /* センサのサンプリング周期計測関数***********************************************/
-void sensor_update(uint16_t now_value)
+void sensor_update(uint8_t now_value)
 {
     static SYSTIM pre_time = 0, now_time = 0;
     static uint32_t pre_value = 0;
