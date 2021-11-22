@@ -148,6 +148,8 @@ void main_task(intptr_t unused)
     //signed char pwm_L, pwm_R; /* 左右モーターPWM出力 */
 
     /* 追加：ローカル変数 *************************************************************************************/
+    int16_t turn = 0;
+    
 
     /********************************************************************************************************/
 
@@ -254,8 +256,10 @@ void main_task(intptr_t unused)
                 break;
                 
             case TEST:
+                ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);
+                turn = Run_getTurn_sensorPID(rgb.r, 64);    // PID制御で旋回量を算出
 
-                Run_setDistance(70, 0, 300);
+                motor_ctrl(50, turn);
             
                 break;
 
@@ -294,8 +298,6 @@ void main_task(intptr_t unused)
         }
         tslp_tsk(4 * 1000U); /* 4msec周期起動 */
 
-        // logflag = 0;        // ファイル書き込み停止フラグ(周期ハンドラ用)
-        // fclose(outputfile); // txtファイル出力終了
     }
     /**
     * Main loop END ***********************************************************************************************************************************
@@ -482,7 +484,7 @@ void measure_task(intptr_t unused)
          getRGB_R(),
          getRGB_G(),
          getRGB_B(),
-         Distance_getDistance(),        // 走行距離[cm]を取得
+         Distance_getDistance() / 10,        // 走行距離[cm]を取得
          Direction_getDirection(),      // 方位を取得(右旋回が正転)
          Run_getAngle(),
          Run_getTurn(),

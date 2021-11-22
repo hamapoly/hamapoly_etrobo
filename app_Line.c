@@ -63,6 +63,7 @@ void Line_task()
                 break;
 
             case LINETRACE:
+                
                 turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
 
                 if(-50 < turn && turn < 50)             // 旋回量が少ない場合
