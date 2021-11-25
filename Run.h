@@ -58,7 +58,7 @@ void    Run_setDetection(int8_t power, int16_t turn, int16_t detection, float di
 void    Run_PID_init();
 
 // PID制御関数(定数) * (センサ入力値 - 目標値)
-int16_t Run_getTurn_sensorPID(uint8_t sensor_val, uint8_t target_val);
+int16_t Run_getTurn_sensorPID(uint16_t sensor_val, uint16_t target_val);
 
 
 // 目標の出力値に到達するまで、指定量の出力値の増減を行い、その結果を返す関数
@@ -77,7 +77,7 @@ int8_t  sampling_sonic(void);
 // サンプリングを用いた直進検知関数
 int8_t  sampling_turn(int16_t turn);
 
-void sensor_update(uint8_t now_value);
+void sensor_update(uint16_t now_value);
 
 float speed_update(void);
 

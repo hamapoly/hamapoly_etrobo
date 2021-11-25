@@ -96,7 +96,7 @@ static rgb_raw_t rgb;
 
 static int8_t logflag = 0;
 
-uint8_t reflect = 0;
+static int16_t ultrasonic_distance = 0;
 
 typedef enum {
     NORMAL,
@@ -252,17 +252,14 @@ void main_task(intptr_t unused)
                 log_open("Log_compareTest.txt");
     
                 motor_ctrl(0, 0);
-                reflect = ev3_color_sensor_get_reflect(color_sensor);
-                tslp_tsk(50 * 1000U);
 
                 t_state = TEST;
                 break;
                 
             case TEST:
-                reflect = ev3_color_sensor_get_reflect(color_sensor);
-                turn = Run_getTurn_sensorPID(reflect, 16);    // PID制御で旋回量を算出
-
-                motor_ctrl(50, turn);
+                motor_ctrl_alt(10, 0, 0.1);
+                if(ev3_ultrasonic_sensor_get_distance(sonar_sensor) <= 3)
+                    motor_ctrl(0, 0);
             
                 break;
 
@@ -431,7 +428,7 @@ static void log_open(char *filename)
         printf("cannot open\n");            // エラーメッセージを出して
         exit(1);                            // 異常終了
     }
-    fprintf(outputfile, "ref\tDistance[cm]\tDirection[°]\tAngle\tTurn\tPower\tSpeed[cm/s]\tSampling[ms]\tTime[ms]\n");     // データの項目名をファイルに書き込み
+    fprintf(outputfile, "Udis\tDistance[cm]\tDirection[°]\tAngle\tTurn\tPower\tSpeed[cm/s]\tSampling[ms]\tTime[ms]\n");     // データの項目名をファイルに書き込み
 
     logflag = 1;    // ファイル書き込みフラグ
 }
@@ -472,20 +469,20 @@ void measure_task(intptr_t unused)
 {
     static int8_t flag = 0;
 
-    reflect = ev3_color_sensor_get_reflect(color_sensor);
     Run_update();       // 時間、RGB値、位置角度を更新
     Distance_update();  // 距離を更新
     Direction_update(); // 方位を更新
     speed_update();     //　速度を更新
-    sensor_update(reflect);    //　センサの周期を更新
+    ultrasonic_distance = ev3_ultrasonic_sensor_get_distance(sonar_sensor);
+    sensor_update(ultrasonic_distance);    //　センサの周期を更新
 
     // logflag = 1;        // ファイル書き込みフラグ
 
     if(logflag == 1)    // ファイル書き込みフラグを確認
     {
         
-        fprintf(outputfile, "%u\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%5.1f\t\t%u\t\t%6u\n", // txtファイル書き込み処理
-         reflect,
+        fprintf(outputfile, "%d\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%5.1f\t\t%u\t\t%6u\n", // txtファイル書き込み処理
+         ultrasonic_distance,
          Distance_getDistance() / 10,        // 走行距離[cm]を取得
          Direction_getDirection(),      // 方位を取得(右旋回が正転)
          Run_getAngle(),

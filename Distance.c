@@ -3,7 +3,7 @@
 
 #include "Distance.h"
 
-#define TIRE_DIAMETER 90.0  //タイヤ直径(約90mm *ETロボコンシミュレータの取扱説明書参照) -> (90.0mm *2020年ADVクラスのDENSOチームのモデル図に記載)
+#define TIRE_DIAMETER 100.0  //タイヤ直径(約90mm *ETロボコンシミュレータの取扱説明書参照) -> (90.0mm *2020年ADVクラスのDENSOチームのモデル図に記載)
 
 static float distance = 0.0;     //走行距離
 static float distance4msL = 0.0; //左タイヤの4ms間の距離
