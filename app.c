@@ -249,7 +249,7 @@ void main_task(intptr_t unused)
         {
             case NORMAL: // カラーセンサ比較 *****************************************************************
 
-                log_open("Log_compareTest.txt");
+                log_open("Log_simTest.txt");
     
                 motor_ctrl(0, 0);
 
@@ -257,10 +257,12 @@ void main_task(intptr_t unused)
                 break;
                 
             case TEST:
-                motor_ctrl_alt(10, 0, 0.1);
-                if(ev3_ultrasonic_sensor_get_distance(sonar_sensor) <= 3)
+                motor_ctrl_alt(50, 0, 0.1);
+                if(ev3_ultrasonic_sensor_get_distance(sonar_sensor) <= 3){
                     motor_ctrl(0, 0);
-            
+                    logflag = 0;
+                    fclose(outputfile); // txtファイル出力終了
+                }
                 break;
 
             case LINE:
@@ -493,10 +495,10 @@ void measure_task(intptr_t unused)
         Run_getTime() * 5 );
     }
     
-    if(flag <= 20){
+    if(flag <= 40){
         flag++;
     }
-    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 20)
+    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 40)
     {
         logflag = 0;
         fclose(outputfile); // txtファイル出力終了
