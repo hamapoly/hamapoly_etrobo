@@ -72,6 +72,7 @@ void Line_task()
 
             case MOVE: // 通常走行 *****************************************************************
 <<<<<<< HEAD
+<<<<<<< HEAD
                 motor_ctrl_alt(100, 0, 0.05);                        // 指定出力になるまで加速して走行
 
                 if(Distance_getDistance() > 1750 && flag_line[0] == 0)
@@ -91,6 +92,8 @@ void Line_task()
                     r_state = CURVE_4;                                  //状態を遷移する
                 }
 =======
+=======
+>>>>>>> 3756e92... 最終版プログラムver1
                 motor_ctrl_alt(100, 0, 0.2);                        // 指定出力になるまで加速して走行
 
                 if(Distance_getDistance() > 1850 && flag_line[0] == 0)
@@ -123,6 +126,7 @@ void Line_task()
 
             case CURVE_1: // カーブ１走行 *****************************************************************
 <<<<<<< HEAD
+<<<<<<< HEAD
                 if(Direction_getDirection() > -75)                  // 指定角度に到達するまで
                 {
                     motor_ctrl(100, -65);                               //左旋回
@@ -131,6 +135,11 @@ void Line_task()
                 {
                     motor_ctrl(100, -50);                               //左旋回
 >>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
+=======
+                if(Direction_getDirection() > -80)                  // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, -50);                               //左旋回
+>>>>>>> 3756e92... 最終版プログラムver1
                 }
                 else                                                // 指定角度に到達した場合
                 {
@@ -142,6 +151,7 @@ void Line_task()
 
             case CURVE_2: // カーブ2走行 *****************************************************************
 <<<<<<< HEAD
+<<<<<<< HEAD
                 if(Direction_getDirection() > -250)                 // 指定角度に到達するまで
                 {
                     motor_ctrl(100, -75);                               //左旋回
@@ -150,6 +160,11 @@ void Line_task()
                 {
                     motor_ctrl(100, -65);                               //左旋回
 >>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
+=======
+                if(Direction_getDirection() > -220)                 // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, -65);                               //左旋回
+>>>>>>> 3756e92... 最終版プログラムver1
                 }
                 else                                                // 指定角度に到達した場合
                 {
@@ -160,6 +175,7 @@ void Line_task()
                 break;
 
             case CURVE_Z: // カーブZ字走行 *****************************************************************                
+<<<<<<< HEAD
 <<<<<<< HEAD
                 if(Distance_getDistance() < 4400 && Direction_getDirection() < -185)
                 {                                                   // 指定距離・角度に到達するまで
@@ -204,6 +220,30 @@ void Line_task()
                 }
                 else                                                // 指定角度に到達した場合
                 {
+=======
+                if(Distance_getDistance() < 4300 && Direction_getDirection() < -170)
+                {                                                   // 指定距離・角度に到達するまで
+                    motor_ctrl(100, 65);                                // 右旋回
+                }
+                else if(Distance_getDistance() < 4400)              //指定距離に到達するまで
+                {
+                    motor_ctrl(100, 0);                                 // 前進
+                }
+                else if(Distance_getDistance() < 4800 && Direction_getDirection() < -40)
+                {                                                   // 指定距離・角度に到達するまで
+                    motor_ctrl(100, 70);                                // 右旋回
+                }
+                else if(Distance_getDistance() < 4900)              // 指定距離に到達するまで
+                {
+                    motor_ctrl(100, 0);                                 // 前進
+                }
+                else if(Direction_getDirection() > -155)            // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, -70);                               // 左旋回
+                }
+                else                                                // 指定角度に到達した場合
+                {
+>>>>>>> 3756e92... 最終版プログラムver1
                     flag_line[2] = 1;                                   // フラグを立てる
                     r_state = MOVE;                                     // 状態を遷移する
                 }
@@ -222,6 +262,7 @@ void Line_task()
                 if(Distance_getDistance() < 6100 && Direction_getDirection() > -230)
                 {                                                   // 指定距離・角度に到達するまで
                    motor_ctrl(100, -70);                                // 左旋回
+<<<<<<< HEAD
                 }
                 else if(Distance_getDistance() < 6200)              // 指定距離に到達するまで
 >>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
@@ -238,13 +279,25 @@ void Line_task()
                     motor_ctrl_alt(50, 10, 0.1);                                // 右旋回
                     if(rgb.r < 75 && rgb.g < 75 && rgb.b < 55)      // 黒ラインを検知した場合
 =======
+=======
+                }
+                else if(Distance_getDistance() < 6200)              // 指定距離に到達するまで
+                {
+                    motor_ctrl(100, 0);                                 // 前進
+                }
+                else if(Direction_getDirection() < -90)             // 指定角度に到達するまで
+                {
+>>>>>>> 3756e92... 最終版プログラムver1
                     motor_ctrl(100, 55);                                // 右旋回
                 }
                 else                                                // 指定角度に到達した場合
                 {
                     motor_ctrl(100, 18);                                // 右旋回
                     if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)      // 黒ラインを検知した場合
+<<<<<<< HEAD
 >>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
+=======
+>>>>>>> 3756e92... 最終版プログラムver1
                     {
                         flag_line[3] = 1;                               //フラグを立てる
                         r_state = LINETRACE;                            //状態を遷移する
