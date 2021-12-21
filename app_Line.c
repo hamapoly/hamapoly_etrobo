@@ -67,23 +67,23 @@ void Line_task()
                 break;
 
             case MOVE: // 通常走行 *****************************************************************
-                motor_ctrl_alt(100, 0, 0.2);
+                motor_ctrl_alt(100, 0, 0.2);                        // 指定出力になるまで加速して走行
 
                 if(Distance_getDistance() > 1850 && flag_line[0] == 0)
-                {
-                    r_state = CURVE_1;
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_1;                                  //状態を遷移する
                 }
                 else if(Distance_getDistance() > 2900 && flag_line[1] == 0)
-                {
-                    r_state = CURVE_2;
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_2;                                  //状態を遷移する
                 }
                 else if(Distance_getDistance() > 3750 && flag_line[2] == 0)
-                {
-                    r_state = CURVE_Z;
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_Z;                                  //状態を遷移する
                 }
                 else if(Distance_getDistance() > 5750 && flag_line[3] == 0)
-                {
-                    r_state = CURVE_4;
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_4;                                  //状態を遷移する
                 }
                 // else if(Distance_getDistance() > 8500)
                 // {
@@ -97,56 +97,56 @@ void Line_task()
                 break;
 
             case CURVE_1: // カーブ１走行 *****************************************************************
-                if(Direction_getDirection() > -80)
+                if(Direction_getDirection() > -80)                  // 指定角度に到達するまで
                 {
-                    motor_ctrl(100, -50);        
+                    motor_ctrl(100, -50);                               //左旋回
                 }
-                else
+                else                                                // 指定角度に到達した場合
                 {
-                    flag_line[0] = 1;
-                    r_state = MOVE;
+                    flag_line[0] = 1;                                   //フラグを立てる
+                    r_state = MOVE;                                     //状態を遷移する
                 }
 
                 break;
 
             case CURVE_2: // カーブ2走行 *****************************************************************
-                if(Direction_getDirection() > -220)
+                if(Direction_getDirection() > -220)                 // 指定角度に到達するまで
                 {
-                    motor_ctrl(100, -65);
+                    motor_ctrl(100, -65);                               //左旋回
                 }
-                else
+                else                                                // 指定角度に到達した場合
                 {
-                    flag_line[1] = 1;
-                    r_state = MOVE;
+                    flag_line[1] = 1;                                   //フラグを立てる
+                    r_state = MOVE;                                     //状態を遷移する
                 }
 
                 break;
 
             case CURVE_Z: // カーブZ字走行 *****************************************************************                
                 if(Distance_getDistance() < 4300 && Direction_getDirection() < -170)
-                {
-                    motor_ctrl(100, 65);                   
+                {                                                   // 指定距離・角度に到達するまで
+                    motor_ctrl(100, 65);                                // 右旋回
                 }
-                else if(Distance_getDistance() < 4400)
+                else if(Distance_getDistance() < 4400)              //指定距離に到達するまで
                 {
-                    motor_ctrl(100, 0);
+                    motor_ctrl(100, 0);                                 // 前進
                 }
                 else if(Distance_getDistance() < 4800 && Direction_getDirection() < -40)
-                {
-                    motor_ctrl(100, 70);
+                {                                                   // 指定距離・角度に到達するまで
+                    motor_ctrl(100, 70);                                // 右旋回
                 }
-                else if(Distance_getDistance() < 4900)
+                else if(Distance_getDistance() < 4900)              // 指定距離に到達するまで
                 {
-                    motor_ctrl(100, 0);
+                    motor_ctrl(100, 0);                                 // 前進
                 }
-                else if(Direction_getDirection() > -155)
+                else if(Direction_getDirection() > -155)            // 指定角度に到達するまで
                 {
-                    motor_ctrl(100, -70);
+                    motor_ctrl(100, -70);                               // 左旋回
                 }
-                else
+                else                                                // 指定角度に到達した場合
                 {
-                    flag_line[2] = 1;
-                    r_state = MOVE;
+                    flag_line[2] = 1;                                   // フラグを立てる
+                    r_state = MOVE;                                     // 状態を遷移する
                 }
 
                 break;
@@ -154,24 +154,24 @@ void Line_task()
             case CURVE_4: // カーブ4走行 *****************************************************************
 
                 if(Distance_getDistance() < 6100 && Direction_getDirection() > -230)
-                {
-                   motor_ctrl(100, -70);
+                {                                                   // 指定距離・角度に到達するまで
+                   motor_ctrl(100, -70);                                // 左旋回
                 }
-                else if(Distance_getDistance() < 6200)
+                else if(Distance_getDistance() < 6200)              // 指定距離に到達するまで
                 {
-                    motor_ctrl(100, 0);
+                    motor_ctrl(100, 0);                                 // 前進
                 }
-                else if(Direction_getDirection() < -90)
+                else if(Direction_getDirection() < -90)             // 指定角度に到達するまで
                 {
-                    motor_ctrl(100, 55);
+                    motor_ctrl(100, 55);                                // 右旋回
                 }
-                else
+                else                                                // 指定角度に到達した場合
                 {
-                    motor_ctrl(100, 18);
-                    if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)
+                    motor_ctrl(100, 18);                                // 右旋回
+                    if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)      // 黒ラインを検知した場合
                     {
-                        flag_line[3] = 1;
-                        r_state = LINETRACE;
+                        flag_line[3] = 1;                               //フラグを立てる
+                        r_state = LINETRACE;                            //状態を遷移する
                     }
                 }
 
