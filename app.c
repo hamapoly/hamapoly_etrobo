@@ -247,7 +247,7 @@ void main_task(intptr_t unused)
 
                 Line_task();                // スタート直後からタスク開始 -> スラローム手前の青ラインを検知してタスク終了
 
-                t_state = SLALOM;           // スラローム区間へ移行
+                t_state = GOAL;           // スラローム区間へ移行
                 break;
 
             case SLALOM:
@@ -448,6 +448,8 @@ void logfile_task(intptr_t unused)
     // CRE_CYCの記述については workspace > periodic-task を参考
 void measure_task(intptr_t unused)
 {
+    static int8_t flag = 0;
+
     Run_update();       // 時間、RGB値、位置角度を更新
     Distance_update();  // 距離を更新
     Direction_update(); // 方位を更新
@@ -466,5 +468,16 @@ void measure_task(intptr_t unused)
          Run_getPower(),
          Run_getTurn(),
         Run_getTime() * 5);
+    }
+
+    if(flag <= 20){
+        flag++;
+    }
+    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 20)
+    {
+        logflag = 0;
+        fclose(outputfile); // txtファイル出力終了
+        motor_ctrl(0, 0);
+        t_state = GOAL;
     }
 }
