@@ -51,7 +51,11 @@ void Line_task()
     {
         /* 値の更新 **********************************************************************************************/
         // 周期ハンドラによる取得値も利用できるが、精度を求める場合は使用直前に値を更新した方が良いと思われる
+<<<<<<< HEAD
         //ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
+=======
+        ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
+>>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
         Distance_update();
         Direction_update();
         /********************************************************************************************************/
@@ -67,6 +71,7 @@ void Line_task()
                 break;
 
             case MOVE: // 通常走行 *****************************************************************
+<<<<<<< HEAD
                 motor_ctrl_alt(100, 0, 0.05);                        // 指定出力になるまで加速して走行
 
                 if(Distance_getDistance() > 1750 && flag_line[0] == 0)
@@ -85,13 +90,47 @@ void Line_task()
                 {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
                     r_state = CURVE_4;                                  //状態を遷移する
                 }
+=======
+                motor_ctrl_alt(100, 0, 0.2);                        // 指定出力になるまで加速して走行
+
+                if(Distance_getDistance() > 1850 && flag_line[0] == 0)
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_1;                                  //状態を遷移する
+                }
+                else if(Distance_getDistance() > 2900 && flag_line[1] == 0)
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_2;                                  //状態を遷移する
+                }
+                else if(Distance_getDistance() > 3750 && flag_line[2] == 0)
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_Z;                                  //状態を遷移する
+                }
+                else if(Distance_getDistance() > 5750 && flag_line[3] == 0)
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_4;                                  //状態を遷移する
+                }
+                // else if(Distance_getDistance() > 8500)
+                // {
+                //     motor_ctrl(50, 0);
+                //     if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)
+                //     {
+                //         r_state = LINETRACE;
+                //     }
+                // }
+>>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
             
                 break;
 
             case CURVE_1: // カーブ１走行 *****************************************************************
+<<<<<<< HEAD
                 if(Direction_getDirection() > -75)                  // 指定角度に到達するまで
                 {
                     motor_ctrl(100, -65);                               //左旋回
+=======
+                if(Direction_getDirection() > -80)                  // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, -50);                               //左旋回
+>>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
                 }
                 else                                                // 指定角度に到達した場合
                 {
@@ -102,9 +141,15 @@ void Line_task()
                 break;
 
             case CURVE_2: // カーブ2走行 *****************************************************************
+<<<<<<< HEAD
                 if(Direction_getDirection() > -250)                 // 指定角度に到達するまで
                 {
                     motor_ctrl(100, -75);                               //左旋回
+=======
+                if(Direction_getDirection() > -220)                 // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, -65);                               //左旋回
+>>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
                 }
                 else                                                // 指定角度に到達した場合
                 {
@@ -115,6 +160,7 @@ void Line_task()
                 break;
 
             case CURVE_Z: // カーブZ字走行 *****************************************************************                
+<<<<<<< HEAD
                 if(Distance_getDistance() < 4400 && Direction_getDirection() < -185)
                 {                                                   // 指定距離・角度に到達するまで
                     motor_ctrl(100, 65);                                // 右旋回
@@ -134,6 +180,27 @@ void Line_task()
                 else if(Direction_getDirection() > -175)            // 指定角度に到達するまで
                 {
                     motor_ctrl(100, -80);                               // 左旋回
+=======
+                if(Distance_getDistance() < 4300 && Direction_getDirection() < -170)
+                {                                                   // 指定距離・角度に到達するまで
+                    motor_ctrl(100, 65);                                // 右旋回
+                }
+                else if(Distance_getDistance() < 4400)              //指定距離に到達するまで
+                {
+                    motor_ctrl(100, 0);                                 // 前進
+                }
+                else if(Distance_getDistance() < 4800 && Direction_getDirection() < -40)
+                {                                                   // 指定距離・角度に到達するまで
+                    motor_ctrl(100, 70);                                // 右旋回
+                }
+                else if(Distance_getDistance() < 4900)              // 指定距離に到達するまで
+                {
+                    motor_ctrl(100, 0);                                 // 前進
+                }
+                else if(Direction_getDirection() > -155)            // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, -70);                               // 左旋回
+>>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
                 }
                 else                                                // 指定角度に到達した場合
                 {
@@ -145,22 +212,39 @@ void Line_task()
 
             case CURVE_4: // カーブ4走行 *****************************************************************
 
+<<<<<<< HEAD
                 if(Distance_getDistance() < 6500 && Direction_getDirection() > -260)
                 {                                                   // 指定距離・角度に到達するまで
                    motor_ctrl(100, -70);                                // 左旋回
                 }
                 else if(Distance_getDistance() < 6700)              // 指定距離に到達するまで
+=======
+                if(Distance_getDistance() < 6100 && Direction_getDirection() > -230)
+                {                                                   // 指定距離・角度に到達するまで
+                   motor_ctrl(100, -70);                                // 左旋回
+                }
+                else if(Distance_getDistance() < 6200)              // 指定距離に到達するまで
+>>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
                 {
                     motor_ctrl(100, 0);                                 // 前進
                 }
                 else if(Direction_getDirection() < -90)             // 指定角度に到達するまで
                 {
+<<<<<<< HEAD
                     motor_ctrl(100, 70);                                // 右旋回
                 }
                 else                                                // 指定角度に到達した場合
                 {
                     motor_ctrl_alt(50, 10, 0.1);                                // 右旋回
                     if(rgb.r < 75 && rgb.g < 75 && rgb.b < 55)      // 黒ラインを検知した場合
+=======
+                    motor_ctrl(100, 55);                                // 右旋回
+                }
+                else                                                // 指定角度に到達した場合
+                {
+                    motor_ctrl(100, 18);                                // 右旋回
+                    if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)      // 黒ラインを検知した場合
+>>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
                     {
                         flag_line[3] = 1;                               //フラグを立てる
                         r_state = LINETRACE;                            //状態を遷移する
@@ -170,6 +254,7 @@ void Line_task()
                 break;
 
             case LINETRACE:
+<<<<<<< HEAD
                 ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
                 turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
 
@@ -179,6 +264,16 @@ void Line_task()
                     motor_ctrl_alt(50, turn, 0.1);          // 減速して走行
 
                 if(rgb.r < 75 && rgb.g < 90 && rgb.b > 65 && Distance_getDistance() > 9000)    // 2つ目の青ラインを検知
+=======
+                turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
+
+                if(-50 < turn && turn < 50)             // 旋回量が少ない場合
+                    motor_ctrl_alt(90, turn, 0.5);       // 加速して走行
+                else                                    // 旋回量が多い場合
+                    motor_ctrl_alt(50, turn, 0.5);          // 減速して走行
+
+                if(rgb.r < 75 && rgb.g < 95 && rgb.b > 120 && Distance_getDistance() > 9000)    // 2つ目の青ラインを検知
+>>>>>>> 3756e92c87d265e36731bfc3cacbedf7a13b532f
                 {
                     temp = Distance_getDistance();  // 検知時点でのdistanceを仮置き
                     log_stamp("\n\n\tBlue detected\n\n\n");
