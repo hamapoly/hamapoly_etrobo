@@ -26,6 +26,8 @@ static int8_t   run_power = 0;
 static int16_t  run_turn = 0;
 static int16_t  run_angle = 0;
 static uint32_t run_time = 0;
+static SYSTIM   sampling_time = 0;
+static float    speed = 0;
 
 static int32_t diff[2] = {0, 0};    // PID制御用(カラーセンサー)
 static float integral = 0.0;
@@ -70,6 +72,14 @@ int16_t Run_getAngle(void){ // 位置角(傾き)を取得
 
 uint32_t Run_getTime(void){ // 走行時間を取得(5ms単位) <- 周期ハンドラによって5msごとに更新されるため
     return run_time;
+}
+
+uint32_t Run_getSamplingTime(void){    // センサのサンプリング周期を取得
+    return (uint32_t)sampling_time;
+}
+
+float Run_getSpeed(void){           // 100[ms]ごとの速度を取得
+    return speed;
 }
 
 /* 返り値の最大・最小値を制限する関数 *************************************/
@@ -688,4 +698,34 @@ int8_t sampling_turn(int16_t turn)
         return 1;
     else
         return 0;
+}
+
+/* センサのサンプリング周期計測関数***********************************************/
+void sensor_update(uint16_t now_value)
+{
+    static SYSTIM pre_time = 0, now_time = 0;
+    static uint32_t pre_value = 0;
+
+    if(pre_value != now_value)
+    {
+        pre_value = now_value;
+        get_tim(&now_time);
+        sampling_time = now_time - pre_time;
+        get_tim(&pre_time);
+    }
+}
+
+/* 速度計測関数***********************************************/
+float speed_update(void)
+{
+    static uint32_t pre_time = 0;
+    static float pre_distance = 0.0;
+    
+    if((Run_getTime() - pre_time) >= 20)
+    {
+        speed = (Distance_getDistance() - (float)pre_distance);
+        pre_time = Run_getTime();
+        pre_distance = Distance_getDistance();
+    }
+    return speed;
 }
