@@ -3,7 +3,7 @@
 
 #include "Direction.h"
 
-#define TREAD 150.0 //車体トレッド幅(約140.0mm *ETロボコンシミュレータの取扱説明書参照) -> (150.0mm *2020年ADVクラスのDENSOチームのモデル図に記載)
+#define TREAD 145.0 //車体トレッド幅(約140.0mm *ETロボコンシミュレータの取扱説明書参照) -> (150.0mm *2020年ADVクラスのDENSOチームのモデル図に記載)
 
 static float direction = 0.0; //現在の方位
 

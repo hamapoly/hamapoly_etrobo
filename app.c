@@ -470,10 +470,10 @@ void measure_task(intptr_t unused)
         Run_getTime() * 5);
     }
 
-    if(flag <= 20){
+    if(flag <= 100){
         flag++;
     }
-    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 20)
+    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 100)
     {
         logflag = 0;
         fclose(outputfile); // txtファイル出力終了

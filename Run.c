@@ -5,9 +5,9 @@
 /* マクロ定義 */
 #define DELTA_T 0.004   // 処理周期(4msの場合)
 // 下記のPID値が走行に与える影響については次のサイトが参考になります https://www.tsone.co.jp/blog/archives/889
-#define KP      1.68    // power100_1.68
+#define KP      1.28    // power100_1.68
 #define KI      0.0     // power100_0.47?
-#define KD      0.3     // power100_0.50
+#define KD      0.12     // power100_0.50
 
 /* グローバル変数 */    // static宣言されたグローバル変数の範囲(スコープ)は、宣言した.cファイル内に限定される
 static const sensor_port_t
@@ -40,8 +40,8 @@ void Run_init(void)
 void Run_update(void)
 {
     ++run_time;                                         // 走行時間を加算
-    ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
-    run_angle = ev3_gyro_sensor_get_angle(gyro_sensor); // 位置角(傾き)を更新
+    //ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
+    //run_angle = ev3_gyro_sensor_get_angle(gyro_sensor); // 位置角(傾き)を更新
 }
 
 uint16_t getRGB_R(void){    // カラーセンサーのR値を取得

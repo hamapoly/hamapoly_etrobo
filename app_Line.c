@@ -1,8 +1,8 @@
 #include "app_Line.h"
 
 /* マクロ定義 */
-#define MOTOR_POWER     80  // モーターの出力値(-100 ~ +100)
-#define PID_TARGET_VAL  64  // PID制御におけるセンサrgb.rの目標値 *参考 : https://qiita.com/pulmaster2/items/fba5899a24912517d0c5
+#define MOTOR_POWER     50  // モーターの出力値(-100 ~ +100)
+#define PID_TARGET_VAL  70  // PID制御におけるセンサrgb.rの目標値 *参考 : https://qiita.com/pulmaster2/items/fba5899a24912517d0c5
 
 /* グローバル変数 */
 static const sensor_port_t
@@ -12,10 +12,15 @@ static const sensor_port_t
 typedef enum {
     START,
     MOVE,
+    CURVE_1,
+    CURVE_2,
+    CURVE_Z,
+    CURVE_4,
+    LINETRACE,
     END
     } RUN_STATE;
 
-static RUN_STATE r_state = START;
+static RUN_STATE r_state = LINETRACE;
 
 /* メイン関数 */
 void Line_task()
@@ -26,6 +31,7 @@ void Line_task()
     float temp = 0.0;   // 距離、方位の一時保存用
 
     int8_t flag = 0;
+    int8_t flag_line[] = {0, 0, 0, 0};
     int8_t power = MOTOR_POWER;
 
     int16_t turn = 0;
@@ -45,7 +51,9 @@ void Line_task()
     {
         /* 値の更新 **********************************************************************************************/
         // 周期ハンドラによる取得値も利用できるが、精度を求める場合は使用直前に値を更新した方が良いと思われる
-        ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
+        //ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
+        Distance_update();
+        Direction_update();
         /********************************************************************************************************/
 
         if(flag == 1)   // 終了フラグを確認
@@ -59,14 +67,118 @@ void Line_task()
                 break;
 
             case MOVE: // 通常走行 *****************************************************************
+                motor_ctrl_alt(100, 0, 0.05);                        // 指定出力になるまで加速して走行
+
+                if(Distance_getDistance() > 1750 && flag_line[0] == 0)
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_1;                                  //状態を遷移する
+                }
+                else if(Distance_getDistance() > 2850 && flag_line[1] == 0)
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_2;                                  //状態を遷移する
+                }
+                else if(Distance_getDistance() > 3850 && flag_line[2] == 0)
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_Z;                                  //状態を遷移する
+                }
+                else if(Distance_getDistance() > 6200 && flag_line[3] == 0)
+                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
+                    r_state = CURVE_4;                                  //状態を遷移する
+                }
+            
+                break;
+
+            case CURVE_1: // カーブ１走行 *****************************************************************
+                if(Direction_getDirection() > -75)                  // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, -65);                               //左旋回
+                }
+                else                                                // 指定角度に到達した場合
+                {
+                    flag_line[0] = 1;                                   //フラグを立てる
+                    r_state = MOVE;                                     //状態を遷移する
+                }
+
+                break;
+
+            case CURVE_2: // カーブ2走行 *****************************************************************
+                if(Direction_getDirection() > -250)                 // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, -75);                               //左旋回
+                }
+                else                                                // 指定角度に到達した場合
+                {
+                    flag_line[1] = 1;                                   //フラグを立てる
+                    r_state = MOVE;                                     //状態を遷移する
+                }
+
+                break;
+
+            case CURVE_Z: // カーブZ字走行 *****************************************************************                
+                if(Distance_getDistance() < 4400 && Direction_getDirection() < -185)
+                {                                                   // 指定距離・角度に到達するまで
+                    motor_ctrl(100, 65);                                // 右旋回
+                }
+                else if(Distance_getDistance() < 4800)              //指定距離に到達するまで
+                {
+                    motor_ctrl(100, 0);                                 // 右寄りに前進
+                }
+                else if(Distance_getDistance() < 5200 && Direction_getDirection() < -40)
+                {                                                   // 指定距離・角度に到達するまで
+                    motor_ctrl(100, 80);                                // 右旋回
+                }
+                else if(Distance_getDistance() < 5400)              // 指定距離に到達するまで
+                {
+                    motor_ctrl(100, 0);                                 // 前進
+                }
+                else if(Direction_getDirection() > -175)            // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, -80);                               // 左旋回
+                }
+                else                                                // 指定角度に到達した場合
+                {
+                    flag_line[2] = 1;                                   // フラグを立てる
+                    r_state = MOVE;                                     // 状態を遷移する
+                }
+
+                break;
+
+            case CURVE_4: // カーブ4走行 *****************************************************************
+
+                if(Distance_getDistance() < 6500 && Direction_getDirection() > -260)
+                {                                                   // 指定距離・角度に到達するまで
+                   motor_ctrl(100, -70);                                // 左旋回
+                }
+                else if(Distance_getDistance() < 6700)              // 指定距離に到達するまで
+                {
+                    motor_ctrl(100, 0);                                 // 前進
+                }
+                else if(Direction_getDirection() < -90)             // 指定角度に到達するまで
+                {
+                    motor_ctrl(100, 70);                                // 右旋回
+                }
+                else                                                // 指定角度に到達した場合
+                {
+                    motor_ctrl_alt(50, 10, 0.1);                                // 右旋回
+                    if(rgb.r < 75 && rgb.g < 75 && rgb.b < 55)      // 黒ラインを検知した場合
+                    {
+                        flag_line[3] = 1;                               //フラグを立てる
+                        r_state = LINETRACE;                            //状態を遷移する
+                    }
+                }
+
+                break;
+
+            case LINETRACE:
+                ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
                 turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
 
                 if(-50 < turn && turn < 50)             // 旋回量が少ない場合
-                    motor_ctrl_alt(power, turn, 0.5);       // 加速して走行
+                    motor_ctrl_alt(50, turn, 0.1);       // 加速して走行
                 else                                    // 旋回量が多い場合
-                    motor_ctrl_alt(70, turn, 0.5);          // 減速して走行
+                    motor_ctrl_alt(50, turn, 0.1);          // 減速して走行
 
-                if(Distance_getDistance() > 10000 && rgb.r < 75 && rgb.g < 95 && rgb.b > 120)    // 2つ目の青ラインを検知
+                if(rgb.r < 75 && rgb.g < 90 && rgb.b > 65 && Distance_getDistance() > 9000)    // 2つ目の青ラインを検知
                 {
                     temp = Distance_getDistance();  // 検知時点でのdistanceを仮置き
                     log_stamp("\n\n\tBlue detected\n\n\n");
