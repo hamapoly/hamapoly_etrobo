@@ -5,9 +5,9 @@
 /* マクロ定義 */
 #define DELTA_T 0.004   // 処理周期(4msの場合)
 // 下記のPID値が走行に与える影響については次のサイトが参考になります https://www.tsone.co.jp/blog/archives/889
-#define KP      1.68    // power100_1.68
-#define KI      0.0     // power100_0.47?
-#define KD      0.3     // power100_0.50
+#define KP      1.38    // sim_power100 1.68     //sim_power80-70 1.68     //実機_power50 1.38
+#define KI      0.0     // sim_power100 0.47?    //sim_power80-70 0.00     //実機_power50 0.00
+#define KD      0.15    // sim_power100 0.50     //sim_power80-70 0.30     //実機_power50 0.15
 
 /* グローバル変数 */    // static宣言されたグローバル変数の範囲(スコープ)は、宣言した.cファイル内に限定される
 static const sensor_port_t
