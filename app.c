@@ -91,7 +91,7 @@ static FILE     *bt = NULL;     /* Bluetoothファイルハンドル */
 /*************************************************************************************************************************************************/
 static FILE *outputfile;    // 出力ストリーム
 
-static rgb_raw_t rgb;
+rgb_raw_t rgb;
 
 static int8_t logflag = 0;
 
@@ -112,12 +112,13 @@ typedef enum {
     CURVE_Z,
     CURVE_4,
     LINETRACE,
-    END
-    } RUN_STATE;
+    END,
+    GOAL_LINE
+    } RUN_STATE_LINE;
     
 //変更テスト
 static TASK_STATE t_state = LINE;
-static RUN_STATE r_state = LINETRACE;
+static RUN_STATE_LINE line_state = LINETRACE;
 /*************************************************************************************************************************************************/
 
 /* 下記のマクロは個体/環境に合わせて変更する必要があります */
@@ -468,6 +469,8 @@ void logfile_task(intptr_t unused)
     // CRE_CYCの記述については workspace > periodic-task を参考
 void measure_task(intptr_t unused)
 {
+    static int8_t flag = 0;
+
     Run_update();       // 時間、RGB値、位置角度を更新
     Distance_update();  // 距離を更新
     Direction_update(); // 方位を更新
@@ -487,6 +490,18 @@ void measure_task(intptr_t unused)
          Run_getTurn(),
         Run_getTime() * 5);
     }
+    
+    if(flag <= 60){
+        flag++;
+    }
+    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 60)
+    {
+        logflag = 0;
+        fclose(outputfile); // txtファイル出力終了
+        motor_ctrl(0, 0);
+        t_state = GOAL;
+        line_state = GOAL_LINE;
+    }
 }
 
 //*****************************************************************************
@@ -498,7 +513,6 @@ void measure_task(intptr_t unused)
 void Line_task()
 {
     /* ローカル変数 ******************************************************************************************/
-    rgb_raw_t rgb;
 
     float temp = 0.0;   // 距離、方位の一時保存用
 
@@ -531,10 +545,10 @@ void Line_task()
         if(flag == 1)   // 終了フラグを確認
             return;     // 関数終了
 
-        switch(r_state)
+        switch(line_state)
         {
             case START: // スタート後の走行処理 *****************************************************
-                r_state = MOVE;
+                line_state = MOVE;
 
                 break;
 
@@ -543,26 +557,26 @@ void Line_task()
 
                 if(Distance_getDistance() > 1850 && flag_line[0] == 0)
                 {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
-                    r_state = CURVE_1;                                  //状態を遷移する
+                    line_state = CURVE_1;                                  //状態を遷移する
                 }
                 else if(Distance_getDistance() > 2900 && flag_line[1] == 0)
                 {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
-                    r_state = CURVE_2;                                  //状態を遷移する
+                    line_state = CURVE_2;                                  //状態を遷移する
                 }
                 else if(Distance_getDistance() > 3750 && flag_line[2] == 0)
                 {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
-                    r_state = CURVE_Z;                                  //状態を遷移する
+                    line_state = CURVE_Z;                                  //状態を遷移する
                 }
                 else if(Distance_getDistance() > 5750 && flag_line[3] == 0)
                 {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
-                    r_state = CURVE_4;                                  //状態を遷移する
+                    line_state = CURVE_4;                                  //状態を遷移する
                 }
                 // else if(Distance_getDistance() > 8500)
                 // {
                 //     motor_ctrl(50, 0);
                 //     if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)
                 //     {
-                //         r_state = LINETRACE;
+                //         line_state = LINETRACE;
                 //     }
                 // }
             
@@ -576,7 +590,7 @@ void Line_task()
                 else                                                // 指定角度に到達した場合
                 {
                     flag_line[0] = 1;                                   //フラグを立てる
-                    r_state = MOVE;                                     //状態を遷移する
+                    line_state = MOVE;                                     //状態を遷移する
                 }
 
                 break;
@@ -589,7 +603,7 @@ void Line_task()
                 else                                                // 指定角度に到達した場合
                 {
                     flag_line[1] = 1;                                   //フラグを立てる
-                    r_state = MOVE;                                     //状態を遷移する
+                    line_state = MOVE;                                     //状態を遷移する
                 }
 
                 break;
@@ -618,7 +632,7 @@ void Line_task()
                 else                                                // 指定角度に到達した場合
                 {
                     flag_line[2] = 1;                                   // フラグを立てる
-                    r_state = MOVE;                                     // 状態を遷移する
+                    line_state = MOVE;                                     // 状態を遷移する
                 }
 
                 break;
@@ -643,37 +657,44 @@ void Line_task()
                     if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)      // 黒ラインを検知した場合
                     {
                         flag_line[3] = 1;                               //フラグを立てる
-                        r_state = LINETRACE;                            //状態を遷移する
+                        line_state = LINETRACE;                            //状態を遷移する
                     }
                 }
 
                 break;
 
             case LINETRACE:
+                //ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
                 turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
 
                 if(-50 < turn && turn < 50)             // 旋回量が少ない場合
-                    motor_ctrl_alt(MOTOR_POWER, turn, 0.5);       // 加速して走行
+                    motor_ctrl_alt(power, turn, 0.5);       // 加速して走行
                 else                                    // 旋回量が多い場合
-                    motor_ctrl_alt(MOTOR_POWER, turn, 0.5);          // 減速して走行
+                    motor_ctrl_alt(power, turn, 0.5);          // 減速して走行
 
-                if(rgb.r < 75 && rgb.g < 95 && rgb.b > 120 && Distance_getDistance() > 9000)    // 2つ目の青ラインを検知
+                if(rgb.r < 80 && rgb.g < 90 && rgb.b > 70 && Distance_getDistance() > 11000)    // 2つ目の青ラインを検知
                 {
                     temp = Distance_getDistance();  // 検知時点でのdistanceを仮置き
                     log_stamp("\n\n\tBlue detected\n\n\n");
-                    r_state = END;
+                    line_state = END;
                 }
 
                 break;
 
             case END: // 青ラインを検知したら減速 **************************************************
                 if(Distance_getDistance() < temp + 200)   // 指定距離進むまで
-                    power = Run_getPower_change(power, 30, 1);  // 指定出力になるように減速
+                    power = Run_getPower_change(10, 30, 1);  // 指定出力になるように減速
                 else                        // 減速が終了
                     flag = 1;               // メインループ終了フラグ
 
                 turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);
                 motor_ctrl(power, turn);    // PID制御で走行
+
+                break;
+
+            case GOAL_LINE:
+                ev3_motor_stop(left_motor, true);
+                ev3_motor_stop(right_motor, true);
 
                 break;
 

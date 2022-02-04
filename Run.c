@@ -21,7 +21,7 @@ static const motor_port_t
     arm_motor       = EV3_PORT_A,
     tale_motor      = EV3_PORT_D;
 
-static rgb_raw_t rgb;
+extern rgb_raw_t rgb;
 static int8_t   run_power = 0;
 static int16_t  run_turn = 0;
 static int16_t  run_angle = 0;
