@@ -73,7 +73,7 @@ void Slalom_task()
         {
             case START: // 壁にアームを押し付けて方位を調整、後退してアームを上げる **************
 
-                if(Distance_getDistance() < temp + 180)     // 指定距離に到達していない場合
+                if(Distance_getDistance() < temp + 50)     // 指定距離に到達していない場合
                 {
                     turn = Run_getTurn_sensorPID(rgb.r, 60);    // PID制御で旋回量を算出
                     motor_ctrl(15, turn);                       // 指定出力とPIDでライントレース走行
@@ -87,7 +87,7 @@ void Slalom_task()
                     tslp_tsk(400 * 1000U);                      // 待機
 
                     motor_ctrl(0, 0);                           // モーター停止
-                    arm_up(30, true);                           // アームを上げる
+                    arm_up(100, true);                           // アームを上げる
                     r_state = UP_STAIRS;                        // 状態を遷移する
                 }
                 break;
@@ -95,7 +95,7 @@ void Slalom_task()
             case UP_STAIRS: // 段差を上る ***************************************
                 if(-3 < ev3_gyro_sensor_get_angle(gyro_sensor) && ev3_gyro_sensor_get_angle(gyro_sensor) < 3)
                 {                                           // 傾きが検知されない場合
-                    motor_ctrl(20, 0);                          // 指定出力で前進
+                    motor_ctrl(25, 0);                          // 指定出力で前進
                 }
                 else                                        // 傾きを検知した場合
                 {

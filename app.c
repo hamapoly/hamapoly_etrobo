@@ -92,6 +92,7 @@ static FILE     *bt = NULL;     /* Bluetoothファイルハンドル */
 static FILE *outputfile;    // 出力ストリーム
 
 rgb_raw_t rgb;
+int16_t  run_angle = 0;
 
 static int8_t logflag = 0;
 
@@ -138,8 +139,8 @@ static RUN_STATE_LINE line_state = LINETRACE;
 #define CALIB_FONT_HEIGHT (8/*TODO: magic number*/)
 
 /* マクロ定義 */
-#define MOTOR_POWER     50  // モーターの出力値(-100 ~ +100)
-#define PID_TARGET_VAL  64  // PID制御におけるセンサrgb.rの目標値 *参考 : https://qiita.com/pulmaster2/items/fba5899a24912517d0c5
+#define MOTOR_POWER     40  // モーターの出力値(-100 ~ +100)
+#define PID_TARGET_VAL  74  // PID制御におけるセンサrgb.rの目標値 *参考 : https://qiita.com/pulmaster2/items/fba5899a24912517d0c5
 
 
 /* 関数プロトタイプ宣言 */
@@ -266,9 +267,10 @@ void main_task(intptr_t unused)
             case LINE:
                 log_open("Log_Line.txt");    // txtファイル出力処理
 
+                arm_up(100, true);
                 Line_task();                // スタート直後からタスク開始 -> スラローム手前の青ラインを検知してタスク終了
 
-                t_state = SLALOM;           // スラローム区間へ移行
+                //t_state = SLALOM;           // スラローム区間へ移行
                 break;
 
             case SLALOM:
@@ -298,8 +300,8 @@ void main_task(intptr_t unused)
         }
         tslp_tsk(4 * 1000U); /* 4msec周期起動 */
 
-        logflag = 0;        // ファイル書き込み停止フラグ(周期ハンドラ用)
-        fclose(outputfile); // txtファイル出力終了
+        // logflag = 0;        // ファイル書き込み停止フラグ(周期ハンドラ用)
+        // fclose(outputfile); // txtファイル出力終了
     }
     /**
     * Main loop END ***********************************************************************************************************************************
@@ -470,16 +472,18 @@ void logfile_task(intptr_t unused)
 void measure_task(intptr_t unused)
 {
     static int8_t flag = 0;
+    static int32_t cur_angle = 0;    // 現在のモーター角度
 
     Run_update();       // 時間、RGB値、位置角度を更新
     Distance_update();  // 距離を更新
     Direction_update(); // 方位を更新
+    cur_angle = ev3_motor_get_counts(arm_motor);
 
     // logflag = 1;        // ファイル書き込みフラグ
 
     if(logflag == 1)    // ファイル書き込みフラグを確認
     {
-        fprintf(outputfile, "%d\t%d\t%d\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%6dms\n", // txtファイル書き込み処理
+        fprintf(outputfile, "%d\t%d\t%d\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%6dms\t%d\n", // txtファイル書き込み処理
          getRGB_R(),
          getRGB_G(),
          getRGB_B(),
@@ -488,7 +492,8 @@ void measure_task(intptr_t unused)
          Run_getAngle(),
          Run_getPower(),
          Run_getTurn(),
-        Run_getTime() * 5);
+        Run_getTime() * 5,
+         cur_angle);
     }
     
     if(flag <= 60){
@@ -521,6 +526,8 @@ void Line_task()
     int8_t power = MOTOR_POWER;
 
     int16_t turn = 0;
+
+    char message[30];
 
     /* 初期化処理 ********************************************************************************************/
     // 別ソースコード内の計測用static変数を初期化する(初期化を行わないことで、以前の区間から値を引き継ぐことができる)
@@ -664,7 +671,7 @@ void Line_task()
                 break;
 
             case LINETRACE:
-                //ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
+
                 turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
 
                 if(-50 < turn && turn < 50)             // 旋回量が少ない場合
@@ -672,22 +679,29 @@ void Line_task()
                 else                                    // 旋回量が多い場合
                     motor_ctrl_alt(power, turn, 0.5);          // 減速して走行
 
-                if(rgb.r < 80 && rgb.g < 90 && rgb.b > 70 && Distance_getDistance() > 11000)    // 2つ目の青ラインを検知
+                if(rgb.r < 65 && rgb.g < 90 && rgb.b > 70 && Distance_getDistance() > 11000)    // 2つ目の青ラインを検知  Distance_getDistance() > 11000
                 {
                     temp = Distance_getDistance();  // 検知時点でのdistanceを仮置き
                     log_stamp("\n\n\tBlue detected\n\n\n");
                     line_state = END;
+                    motor_ctrl(0,0);
+                    arm_down(100, true);
                 }
+
+                // run_angle = ev3_gyro_sensor_get_angle(gyro_sensor);
+                // sprintf(message, "ANGLE:%d          ",run_angle);
+                // ev3_lcd_draw_string(message, 0,10);
 
                 break;
 
             case END: // 青ラインを検知したら減速 **************************************************
-                if(Distance_getDistance() < temp + 200)   // 指定距離進むまで
+                
+                if(Distance_getDistance() < temp + 100)   // 指定距離進むまで
                     power = Run_getPower_change(10, 30, 1);  // 指定出力になるように減速
                 else                        // 減速が終了
                     flag = 1;               // メインループ終了フラグ
 
-                turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);
+                turn = Run_getTurn_sensorPID(rgb.r, 55);
                 motor_ctrl(power, turn);    // PID制御で走行
 
                 break;

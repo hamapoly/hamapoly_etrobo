@@ -22,9 +22,9 @@ static const motor_port_t
     tale_motor      = EV3_PORT_D;
 
 extern rgb_raw_t rgb;
+extern int16_t  run_angle;
 static int8_t   run_power = 0;
 static int16_t  run_turn = 0;
-static int16_t  run_angle = 0;
 static uint32_t run_time = 0;
 static SYSTIM   sampling_time = 0;
 static float    speed = 0;
@@ -155,7 +155,8 @@ void motor_ctrl(int8_t power, int16_t turn)
 // 引数 : 無し
 // 返り値 : 無し
 // 概要 : アームの上げ/下げを行う
-// 初期角度 -56, 最大角度 40, 最低角度 -70
+// sim  : 初期角度 -56, 最大角度 40, 最低角度 -70
+// 実機 : 初期角度 25, 最大角度 80, 最低角度 0
 //*****************************************************************************
 // アーム上昇制御関数
 void arm_up(uint8_t power, bool_t loop)
@@ -166,7 +167,7 @@ void arm_up(uint8_t power, bool_t loop)
     do
     {
         // printf("%d ", cur_angle);
-        if(cur_angle < -20)                                     // 指定角度に到達していない場合
+        if(cur_angle < 20)                                     // 指定角度に到達していない場合
         {
             if(cur_power < power)                                   // 指定出力に到達していない場合
                 ++cur_power;                                            // 出力増加
@@ -204,7 +205,7 @@ void arm_down(uint8_t power, bool_t loop)
     do
     {
         // printf("%d ", cur_angle);
-        if(cur_angle > -47)                                             // 指定角度に到達していない場合
+        if(cur_angle > -5)                                             // 指定角度に到達していない場合
         {
             if(cur_power > power * -1)                                      // 指定出力に到達していない場合
                 --cur_power;                                                    // 出力増加
