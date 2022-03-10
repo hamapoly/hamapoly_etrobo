@@ -468,12 +468,11 @@ void logfile_task(intptr_t unused)
 void measure_task(intptr_t unused)
 {
     static int8_t flag = 0;
-
     Run_update();       // 時間、RGB値、位置角度を更新
     Distance_update();  // 距離を更新
     Direction_update(); // 方位を更新
     speed_update();     //　速度を更新
-    sensor_update(getRGB_R());    //　センサの周期を更新
+    sensor_update(ev3_ultrasonic_sensor_get_distance(sonar_sensor));    //　センサの周期を更新
 
     // logflag = 1;        // ファイル書き込みフラグ
 
@@ -494,10 +493,10 @@ void measure_task(intptr_t unused)
         Run_getTime() * 5 );
     }
     
-    if(flag <= 20){
+    if(flag <= 40){
         flag++;
     }
-    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 20)
+    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 40)
     {
         logflag = 0;
         fclose(outputfile); // txtファイル出力終了

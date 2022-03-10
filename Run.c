@@ -701,16 +701,20 @@ int8_t sampling_turn(int16_t turn)
 }
 
 
-
-/* センサのサンプリング周期計測関数***********************************************/
-void sensor_update(uint16_t now_value)
+/* センサのサンプリング周期計測関数 *********************************************************************************************************************/
+// 使用方法に制限あり．．．引数にはfloat型を代入できない(代入するとコンパイルエラーが発生する)
+// 使用方法...引数にセンサで取得した値を代入することでそのセンサの更新周期が取得可能
+// 使用例
+//  sensor_update(getRGB_B());
+/******************************************************************************************************************************************/
+void sensor_update(void *now_value)
 {
     static SYSTIM pre_time = 0, now_time = 0;
     static uint32_t pre_value = 0;
 
-    if(pre_value != now_value)
+    if(pre_value != *(uint32_t *)now_value)
     {
-        pre_value = now_value;
+        pre_value = *(uint32_t *)now_value;
         get_tim(&now_time);
         sampling_time = now_time - pre_time;
         get_tim(&pre_time);

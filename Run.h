@@ -77,7 +77,7 @@ int8_t  sampling_sonic(void);
 // サンプリングを用いた直進検知関数
 int8_t  sampling_turn(int16_t turn);
 
-void sensor_update(uint16_t now_value);
+void sensor_update(void *now_value);
 
 float speed_update(void);
 
