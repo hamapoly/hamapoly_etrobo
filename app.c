@@ -12,17 +12,20 @@
 #include "app.h"
 #include "etroboc_ext.h"
 
-/* 追加：ヘッダファイル */
-/*************************************************************************************************************************************************/
+// 追記箇所-------------------------------------------------------------
 // ソースファイルの分割について                ：https://dev.toppers.jp/trac_user/ev3pf/wiki/UserManual *(2.2. ソースファイルの追加)
 // 複数ディレクトリへの分割について(できなかった)：https://dev.toppers.jp/trac_user/ev3pf/wiki/FAQ *(Q：アプリケーションのソースコードを複数のディレクトリに分けて管理するには~)
-#include "app_Block.h"
+#include "Run.h"
+#include "Controller.h"
+#include "app_Linetrace.h"
 #include "app_Slalom.h"
-/*************************************************************************************************************************************************/
+#include "app_Block.h"
+// 追記終了-------------------------------------------------------------
 
 /* APIについて */
 // ev3のAPI：https://www.toppers.jp/ev3pf/EV3RT_C_API_Reference/index.html
 // APIのソースコードは hrp3 > sdk > common > ev3api > src　を参照
+// tslp_tsk等、サービスコールについて：https://monozukuri-c.com/itron-servicecall/
 
 #if defined(BUILD_MODULE)
     #include "module_cfg.h"
@@ -79,48 +82,21 @@ static const sensor_port_t
 static const motor_port_t
     left_motor      = EV3_PORT_C,
     right_motor     = EV3_PORT_B,
-    /* 追加：接続定義 *****************************************************************************************/
+    // 追記箇所-------------------------------------------------------------
     arm_motor       = EV3_PORT_A,
     tale_motor      = EV3_PORT_D;
-    /********************************************************************************************************/
+    // 追記終了-------------------------------------------------------------
 
 static int      bt_cmd = 0;     /* Bluetoothコマンド 1:リモートスタート */
 static FILE     *bt = NULL;     /* Bluetoothファイルハンドル */
 
-/* 追加：グローバル変数,構造体 */
-/*************************************************************************************************************************************************/
+// 追記箇所-------------------------------------------------------------
 static FILE *outputfile;    // 出力ストリーム
-
-rgb_raw_t rgb;
-int16_t  run_angle = 0;
 
 static int8_t logflag = 0;
 
-//全体統括用の構造体
-typedef enum {
-    LINE,   // ライントレース区間
-    SLALOM, // スラローム区間
-    BLOCK,  // ブロック搬入区間
-    GOAL    // タスク終了
-} TASK_STATE;
-
-//ライントレース区間用の構造体
-typedef enum {
-    START,
-    MOVE,
-    CURVE_1,
-    CURVE_2,
-    CURVE_Z,
-    CURVE_4,
-    LINETRACE,
-    END,
-    GOAL_LINE
-    } RUN_STATE_LINE;
-    
-//変更テスト
-static TASK_STATE t_state = LINE;
-static RUN_STATE_LINE line_state = LINETRACE;
-/*************************************************************************************************************************************************/
+uint8_t cnt_cyc = 0;    // 周期ハンドラのタッチセンサ終了処理用
+// 追記終了-------------------------------------------------------------
 
 /* 下記のマクロは個体/環境に合わせて変更する必要があります */
 /* sample_c1マクロ */
@@ -138,11 +114,6 @@ static RUN_STATE_LINE line_state = LINETRACE;
 #define CALIB_FONT_WIDTH (6/*TODO: magic number*/)
 #define CALIB_FONT_HEIGHT (8/*TODO: magic number*/)
 
-/* マクロ定義 */
-#define MOTOR_POWER     40  // モーターの出力値(-100 ~ +100)
-#define PID_TARGET_VAL  74  // PID制御におけるセンサrgb.rの目標値 *参考 : https://qiita.com/pulmaster2/items/fba5899a24912517d0c5
-
-
 /* 関数プロトタイプ宣言 */
 static int sonar_alert(void);
 static void _syslog(int level, char* text);
@@ -150,15 +121,12 @@ static void _log(char* text);
 //static void tail_control(signed int angle);
 //static void backlash_cancel(signed char lpwm, signed char rpwm, int32_t *lenc, int32_t *renc);
 
-/* 追加：関数プロトタイプ宣言 */
-/*************************************************************************************************************************************************/
+// 追記箇所-------------------------------------------------------------
 static void log_open(char* filename);
-
-void Line_task();
 
 // void log_stamp(char *stamp);     // Run.hでextern宣言
 // extern宣言の記述について：https://www.khstasaba.com/?p=849
-/*************************************************************************************************************************************************/
+// 追記終了-------------------------------------------------------------
 
 /* メインタスク */
 void main_task(intptr_t unused)
@@ -167,9 +135,14 @@ void main_task(intptr_t unused)
     //signed char turn;         /* 旋回命令 */
     //signed char pwm_L, pwm_R; /* 左右モーターPWM出力 */
 
-    /* 追加：ローカル変数 *************************************************************************************/
-
-    /********************************************************************************************************/
+    // 追記箇所-------------------------------------------------------------
+    enum {
+        LINETRACE,  // ライントレース区間
+        SLALOM,     // スラローム区間
+        BLOCK,      // ブロック搬入区間 + ガレージ停車
+        GOAL        // タスク終了
+    } t_state = LINETRACE;
+    // 追記終了-------------------------------------------------------------
 
     /* LCD画面表示 */
     ev3_lcd_fill_rect(0, 0, EV3_LCD_WIDTH, EV3_LCD_HEIGHT, EV3_LCD_WHITE);
@@ -181,20 +154,20 @@ void main_task(intptr_t unused)
     /* センサー入力ポートの設定 */
     ev3_sensor_config(sonar_sensor, ULTRASONIC_SENSOR);
     ev3_sensor_config(color_sensor, COLOR_SENSOR);
-    // ev3_color_sensor_get_reflect(color_sensor); /* 反射率モード */
+    // ev3_color_sensor_get_reflect(color_sensor); /* 反射率モード */   // RGBモードを使用するため無効化
     ev3_sensor_config(touch_sensor, TOUCH_SENSOR);
 
     /* モーター出力ポートの設定 */
     ev3_motor_config(left_motor, LARGE_MOTOR);
     ev3_motor_config(right_motor, LARGE_MOTOR);
 
-    /* 追加：入力ポートの設定 *********************************************************************************/
-    ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   /* RGBモード */
+    // 追記箇所-------------------------------------------------------------
+    // ポートの設定
     ev3_sensor_config(gyro_sensor, GYRO_SENSOR);    // ジャイロセンサー
     
     ev3_motor_config(arm_motor, LARGE_MOTOR);       // 前部のアーム
     ev3_motor_config(tale_motor, MEDIUM_MOTOR);     // 後部の尻尾
-    /********************************************************************************************************/
+    // 追記終了-------------------------------------------------------------
 
     if (_bt_enabled)
     {
@@ -242,15 +215,16 @@ void main_task(intptr_t unused)
 
     ev3_led_set_color(LED_GREEN); /* スタート通知 */
 
-    /* 追加：初期化 ******************************************************************************************/
+    // 追記箇所-------------------------------------------------------------
+    // 初期化処理
     ev3_gyro_sensor_reset(gyro_sensor);     // ジャイロセンサーの初期化
     Run_init();                             // 走行時間を初期化
-    Run_PID_init();
+    Ctrl_initPID();                          // PID用変数の初期化
 
-    /* 追加：タスク・周期ハンドラの起動 ************************************************************************/
-    // act_tsk(LOGFILE_TASK);   // タスク
-    sta_cyc(CYC_MEASURE_TSK);   // 周期ハンドラ
-    /********************************************************************************************************/
+    // タスク,ハンドラ起動処理
+    // act_tsk(SHUTDOWN_TASK);     // タスク
+    sta_cyc(CYC_DATALOG_TSK);   // 周期ハンドラ
+    // 追記終了-------------------------------------------------------------
 
     /**
     * Main loop ***************************************************************************************************************************************
@@ -264,27 +238,27 @@ void main_task(intptr_t unused)
         // ブロック搬入区間     ：シミュレータ設定位置 [X = 左エッジ24.3 | 右エッジ24.1, Y = 0.0, Z = 8.0, R = 180]
         switch(t_state)
         {
-            case LINE:
-                log_open("Log_Line.txt");    // txtファイル出力処理
+            case LINETRACE:
+                log_open("Log_Linetrace.txt");   // txtファイル出力処理
 
-                arm_up(100, true);
-                Line_task();                // スタート直後からタスク開始 -> スラローム手前の青ラインを検知してタスク終了
+                Ctrl_arm_up(100, true);     // 実機用
+                section_Linetrace();        // スタート直後からタスク開始 -> スラローム手前の青ラインを検知してタスク終了
 
-                //t_state = SLALOM;           // スラローム区間へ移行
+                t_state = SLALOM;           // スラローム区間へ移行
                 break;
 
             case SLALOM:
-                log_open("Log_Slalom.txt");  // txtファイル出力処理
+                log_open("Log_Slalom.txt"); // txtファイル出力処理
 
-                Slalom_task();              // ライントレース区間終了直後からタスク開始 -> スラローム板を降りた後、ラインに復帰してタスク終了
+                section_Slalom();           // ライントレース区間終了直後からタスク開始 -> スラローム板を降りた後、ラインに復帰してタスク終了
 
                 t_state = BLOCK;            // ブロック搬入区間へ移行
                 break;
 
             case BLOCK:
-                log_open("Log_Block.txt");   // txtファイル出力処理
+                log_open("Log_Block.txt");  // txtファイル出力処理
 
-                Block_task();               // スラローム区間終了直後からタスク開始 -> ブロックを運搬しつつ、ガレージに停車してタスク終了
+                section_Block();            // スラローム区間終了直後からタスク開始 -> ブロックを運搬しつつ、ガレージに停車してタスク終了
 
                 t_state = GOAL;             // 終了処理へ移行
                 break;
@@ -300,17 +274,18 @@ void main_task(intptr_t unused)
         }
         tslp_tsk(4 * 1000U); /* 4msec周期起動 */
 
-        // logflag = 0;        // ファイル書き込み停止フラグ(周期ハンドラ用)
-        // fclose(outputfile); // txtファイル出力終了
+        logflag = 0;        // ファイル書き込み停止フラグ(周期ハンドラ用)
+        fclose(outputfile); // txtファイル出力終了
     }
     /**
     * Main loop END ***********************************************************************************************************************************
     */
 
-    /* 追加：タスク・周期ハンドラの終了 ************************************************************************/
-    // ter_tsk(LOGFILE_TASK);   // タスク
-    stp_cyc(CYC_MEASURE_TSK);   // 周期ハンドラ
-    /********************************************************************************************************/
+    // 追記箇所-------------------------------------------------------------
+    // タスク,ハンドラ終了処理
+    // ter_tsk(SHUTDOWN_TASK);     // タスク
+    stp_cyc(CYC_DATALOG_TSK);   // 周期ハンドラ
+    // 追記終了-------------------------------------------------------------
 
     ev3_motor_stop(left_motor, false);
     ev3_motor_stop(right_motor, false);
@@ -417,13 +392,13 @@ static void _log(char *text){
     _syslog(LOG_NOTICE, text);
 }
 
-/* 追加：関数 */
-/*************************************************************************************************************************************************/
+// 追記箇所-----------------------------------------------------------------------------------------------------------------------------------------
 
 // 引数filenameに入力した文字列のファイルを書き込み用にオープンする関数
     // 参考：https://ylb.jp/2006b/proc/fileio/fileoutput.html   https://9cguide.appspot.com/17-01.html
     // 出力先は \\wsl$\Ubuntu-20.04\home\ユーザー名\etrobo\hrp3\sdk\workspace\simdist\hamapoly\__ev3rtfs
     // vscode左側フォルダ欄の"hrp3"から探して右クリック→"Reveal in Explorer"または"ダウンロード"(メモ帳推奨)
+    // *生成されたtxtファイルを削除すると次に実行したときにファイルが生成されなくなることがあった
 static void log_open(char *filename)
 {
     outputfile = fopen(filename, "w");  // ファイルを書き込み用にオープン
@@ -432,7 +407,7 @@ static void log_open(char *filename)
         printf("cannot open\n");            // エラーメッセージを出して
         exit(1);                            // 異常終了
     }
-    fprintf(outputfile, "R\tG\tB\tDistance\tDirection\tAngle\tPower\tTurn\tTime\n");     // データの項目名をファイルに書き込み
+    fprintf(outputfile, "R\tG\tB\tDistance\tDirection\tAngle\tPower_L\tPower_R\tTime\n");     // データの項目名をファイルに書き込み
 
     logflag = 1;    // ファイル書き込みフラグ
 }
@@ -443,281 +418,83 @@ void log_stamp(char *stamp)
     fprintf(outputfile, stamp);
 }
 
-// Mainタスクのスリープ(tslp_tsk)中に実行される測定値書き込み関数 *現状main_task内のtslp_tskにしか反応していないと思われるため停止中
-    // tslp_tsk等、サービスコールについて：https://monozukuri-c.com/itron-servicecall/
-void logfile_task(intptr_t unused)
+// タッチセンサ押下でプログラムを終了するタスク
+void shutdown_task(intptr_t unused)
 {
-    if(logflag == 1)    // ファイル書き込みフラグを確認
-    {
-        fprintf(outputfile, "%d\t%d\t%d\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%6dms\n", // txtファイル書き込み処理
-         getRGB_R(),
-         getRGB_G(),
-         getRGB_B(),
-         Distance_getDistance(),    // 走行距離を取得
-         Direction_getDirection(),  // 方位を取得(右旋回が正転)
-         Run_getAngle(),
-         Run_getPower(),
-         Run_getTurn(),
-        Run_getTime() * 5);
+    static uint8_t cnt = 0;
 
-        logflag = 0;    // ファイル書き込み停止フラグ
+    while(1)
+    {
+        if(!ev3_touch_sensor_is_pressed(touch_sensor) && cnt > 50)
+        {
+            ter_tsk(MAIN_TASK);                 // mainタスク終了
+
+            log_stamp("\n\n\tShutdown\n\n\n");
+            logflag = 0;                        // ファイル書き込みoff
+            fclose(outputfile);                 // txtファイル出力終了
+
+            stp_cyc(CYC_DATALOG_TSK);           // 周期ハンドラ停止
+
+            ev3_motor_stop(left_motor, false);  // 停車
+            ev3_motor_stop(right_motor, false);
+
+            ext_tsk();
+        }
+        
+        if(ev3_touch_sensor_is_pressed(touch_sensor) && cnt < 100)
+            cnt++;
+        else if(!ev3_touch_sensor_is_pressed(touch_sensor))
+            cnt = 0;
+
+        tslp_tsk(8 * 1000U); /* 8msec周期起動 */
     }
 }
 
-// 周期ハンドラによって5msごとに計測値の更新を行う関数 *4ms以下にするとtimescaleが1を下回ることがある
+// 5msごとに計測値の更新を行う周期ハンドラ (*シミュレータの場合、4ms以下の周期起動にするとtimescaleが1を下回ることがある)
     // タスク・周期ハンドラについて(各種計測値の更新などに利用)：https://qiita.com/koushiro/items/22a10c7dd451291fd95b , https://qiita.com/yamanekko/items/7ddb6029820d3cfbd583
     // 上記機能APIの名称・仕様と変更点                        ：https://dev.toppers.jp/trac_user/ev3pf/wiki/FAQ *(Q：周期的な処理を追加するためには~ Q：タスクの優先度を変更するには~)
     // もっと詳しいやつ                                       ：https://www.tron.org/ja/page-722/
     // CRE_CYCの記述については workspace > periodic-task を参考
-void measure_task(intptr_t unused)
+void datalog_cyc(intptr_t unused)
 {
-    static int8_t flag = 0;
-    static int32_t cur_angle = 0;    // 現在のモーター角度
+    int32_t cur_angle = ev3_motor_get_counts(arm_motor);    // 現在のモーター角度
 
     Run_update();       // 時間、RGB値、位置角度を更新
-    Distance_update();  // 距離を更新
-    Direction_update(); // 方位を更新
-    cur_angle = ev3_motor_get_counts(arm_motor);
-
-    // logflag = 1;        // ファイル書き込みフラグ
 
     if(logflag == 1)    // ファイル書き込みフラグを確認
     {
         fprintf(outputfile, "%d\t%d\t%d\t%8.3f\t%9.1f\t%4d\t%4d\t%4d\t%6dms\t%d\n", // txtファイル書き込み処理
-         getRGB_R(),
-         getRGB_G(),
-         getRGB_B(),
-         Distance_getDistance(),    // 走行距離を取得
-         Direction_getDirection(),  // 方位を取得(右旋回が正転)
-         Run_getAngle(),
-         Run_getPower(),
-         Run_getTurn(),
+        Run_getRGB_R(),
+        Run_getRGB_G(),
+        Run_getRGB_B(),
+        Run_getDistance(),
+        Run_getDirection(),
+        Run_getAngle(),
+        Run_getPower_L(),
+        Run_getPower_R(),
         Run_getTime() * 5,
-         cur_angle);
+        cur_angle
+        );
     }
-    
-    if(flag <= 60){
-        flag++;
-    }
-    if(ev3_touch_sensor_is_pressed(touch_sensor) == 1 && flag >= 60)
+
+    // タッチセンサによる停止処理(実機でタスクが機能しない問題を解決できていないため、タッチセンサで実機を停止させたい場合はこの処理をコメント解除する)
+    if(!ev3_touch_sensor_is_pressed(touch_sensor) && cnt_cyc > 50)
     {
-        logflag = 0;
-        fclose(outputfile); // txtファイル出力終了
-        motor_ctrl(0, 0);
-        t_state = GOAL;
-        line_state = GOAL_LINE;
+        ter_tsk(MAIN_TASK);                 // mainタスク終了
+
+        log_stamp("\n\n\tShutdown\n\n\n");
+        logflag = 0;                        // ファイル書き込みoff
+        fclose(outputfile);                 // txtファイル出力終了
+
+        ev3_motor_stop(left_motor, false);  // 停車
+        ev3_motor_stop(right_motor, false);
+
+        stp_cyc(CYC_DATALOG_TSK);           // 周期ハンドラ停止
     }
+    if(ev3_touch_sensor_is_pressed(touch_sensor) && cnt_cyc < 100)
+        cnt_cyc++;
+    else if(!ev3_touch_sensor_is_pressed(touch_sensor))
+        cnt_cyc = 0;
 }
 
-//*****************************************************************************
-// 関数名 : Line_task
-// 引数 :   なし
-// 返り値 : なし
-// 概要 : ライントレース区間の走行プログラム
-//*****************************************************************************
-void Line_task()
-{
-    /* ローカル変数 ******************************************************************************************/
-
-    float temp = 0.0;   // 距離、方位の一時保存用
-
-    int8_t flag = 0;
-    int8_t flag_line[] = {0, 0, 0, 0};
-    int8_t power = MOTOR_POWER;
-
-    int16_t turn = 0;
-
-    char message[30];
-
-    /* 初期化処理 ********************************************************************************************/
-    // 別ソースコード内の計測用static変数を初期化する(初期化を行わないことで、以前の区間から値を引き継ぐことができる)
-    Distance_init();    // 距離を初期化
-    Direction_init();   // 方位を初期化
-
-    Run_init();         // 走行時間を初期化
-    Run_PID_init();     // PIDの値を初期化
-
-    /**
-    * Main loop ****************************************************************************************************************************************
-    */
-    while(1)
-    {
-        /* 値の更新 **********************************************************************************************/
-        // 周期ハンドラによる取得値も利用できるが、精度を求める場合は使用直前に値を更新した方が良いと思われる
-        ev3_color_sensor_get_rgb_raw(color_sensor, &rgb);   // RGB値を更新
-        Distance_update();
-        Direction_update();
-        /********************************************************************************************************/
-
-        if(flag == 1)   // 終了フラグを確認
-            return;     // 関数終了
-
-        switch(line_state)
-        {
-            case START: // スタート後の走行処理 *****************************************************
-                line_state = MOVE;
-
-                break;
-
-            case MOVE: // 通常走行 *****************************************************************
-                motor_ctrl_alt(100, 0, 0.2);                        // 指定出力になるまで加速して走行
-
-                if(Distance_getDistance() > 1850 && flag_line[0] == 0)
-                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
-                    line_state = CURVE_1;                                  //状態を遷移する
-                }
-                else if(Distance_getDistance() > 2900 && flag_line[1] == 0)
-                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
-                    line_state = CURVE_2;                                  //状態を遷移する
-                }
-                else if(Distance_getDistance() > 3750 && flag_line[2] == 0)
-                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
-                    line_state = CURVE_Z;                                  //状態を遷移する
-                }
-                else if(Distance_getDistance() > 5750 && flag_line[3] == 0)
-                {                                                   // 指定距離に到達した場合かつフラグが立っていない場合
-                    line_state = CURVE_4;                                  //状態を遷移する
-                }
-                // else if(Distance_getDistance() > 8500)
-                // {
-                //     motor_ctrl(50, 0);
-                //     if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)
-                //     {
-                //         line_state = LINETRACE;
-                //     }
-                // }
-            
-                break;
-
-            case CURVE_1: // カーブ１走行 *****************************************************************
-                if(Direction_getDirection() > -80)                  // 指定角度に到達するまで
-                {
-                    motor_ctrl(100, -50);                               //左旋回
-                }
-                else                                                // 指定角度に到達した場合
-                {
-                    flag_line[0] = 1;                                   //フラグを立てる
-                    line_state = MOVE;                                     //状態を遷移する
-                }
-
-                break;
-
-            case CURVE_2: // カーブ2走行 *****************************************************************
-                if(Direction_getDirection() > -220)                 // 指定角度に到達するまで
-                {
-                    motor_ctrl(100, -65);                               //左旋回
-                }
-                else                                                // 指定角度に到達した場合
-                {
-                    flag_line[1] = 1;                                   //フラグを立てる
-                    line_state = MOVE;                                     //状態を遷移する
-                }
-
-                break;
-
-            case CURVE_Z: // カーブZ字走行 *****************************************************************                
-                if(Distance_getDistance() < 4300 && Direction_getDirection() < -170)
-                {                                                   // 指定距離・角度に到達するまで
-                    motor_ctrl(100, 65);                                // 右旋回
-                }
-                else if(Distance_getDistance() < 4400)              //指定距離に到達するまで
-                {
-                    motor_ctrl(100, 0);                                 // 前進
-                }
-                else if(Distance_getDistance() < 4800 && Direction_getDirection() < -40)
-                {                                                   // 指定距離・角度に到達するまで
-                    motor_ctrl(100, 70);                                // 右旋回
-                }
-                else if(Distance_getDistance() < 4900)              // 指定距離に到達するまで
-                {
-                    motor_ctrl(100, 0);                                 // 前進
-                }
-                else if(Direction_getDirection() > -155)            // 指定角度に到達するまで
-                {
-                    motor_ctrl(100, -70);                               // 左旋回
-                }
-                else                                                // 指定角度に到達した場合
-                {
-                    flag_line[2] = 1;                                   // フラグを立てる
-                    line_state = MOVE;                                     // 状態を遷移する
-                }
-
-                break;
-
-            case CURVE_4: // カーブ4走行 *****************************************************************
-
-                if(Distance_getDistance() < 6100 && Direction_getDirection() > -230)
-                {                                                   // 指定距離・角度に到達するまで
-                   motor_ctrl(100, -70);                                // 左旋回
-                }
-                else if(Distance_getDistance() < 6200)              // 指定距離に到達するまで
-                {
-                    motor_ctrl(100, 0);                                 // 前進
-                }
-                else if(Direction_getDirection() < -90)             // 指定角度に到達するまで
-                {
-                    motor_ctrl(100, 55);                                // 右旋回
-                }
-                else                                                // 指定角度に到達した場合
-                {
-                    motor_ctrl(100, 18);                                // 右旋回
-                    if(rgb.r < 60 && rgb.g < 90 && rgb.b < 90)      // 黒ラインを検知した場合
-                    {
-                        flag_line[3] = 1;                               //フラグを立てる
-                        line_state = LINETRACE;                            //状態を遷移する
-                    }
-                }
-
-                break;
-
-            case LINETRACE:
-
-                turn = Run_getTurn_sensorPID(rgb.r, PID_TARGET_VAL);    // PID制御で旋回量を算出
-
-                if(-50 < turn && turn < 50)             // 旋回量が少ない場合
-                    motor_ctrl_alt(power, turn, 0.5);       // 加速して走行
-                else                                    // 旋回量が多い場合
-                    motor_ctrl_alt(power, turn, 0.5);          // 減速して走行
-
-                if(rgb.r < 65 && rgb.g < 90 && rgb.b > 70 && Distance_getDistance() > 11000)    // 2つ目の青ラインを検知  Distance_getDistance() > 11000
-                {
-                    temp = Distance_getDistance();  // 検知時点でのdistanceを仮置き
-                    log_stamp("\n\n\tBlue detected\n\n\n");
-                    line_state = END;
-                    motor_ctrl(0,0);
-                    arm_down(100, true);
-                }
-
-                // run_angle = ev3_gyro_sensor_get_angle(gyro_sensor);
-                // sprintf(message, "ANGLE:%d          ",run_angle);
-                // ev3_lcd_draw_string(message, 0,10);
-
-                break;
-
-            case END: // 青ラインを検知したら減速 **************************************************
-                
-                if(Distance_getDistance() < temp + 100)   // 指定距離進むまで
-                    power = Run_getPower_change(10, 30, 1);  // 指定出力になるように減速
-                else                        // 減速が終了
-                    flag = 1;               // メインループ終了フラグ
-
-                turn = Run_getTurn_sensorPID(rgb.r, 55);
-                motor_ctrl(power, turn);    // PID制御で走行
-
-                break;
-
-            case GOAL_LINE:
-                ev3_motor_stop(left_motor, true);
-                ev3_motor_stop(right_motor, true);
-
-                break;
-
-            default: // **************************************************************************
-                break;
-        }
-        tslp_tsk(4 * 1000U); /* 4msec周期起動 */
-    }
-    /**
-    * Main loop END ************************************************************************************************************************************
-    */
-}
+// 追記終了-----------------------------------------------------------------------------------------------------------------------------------------

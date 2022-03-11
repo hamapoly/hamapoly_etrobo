@@ -1,10 +1,11 @@
 ﻿#ifndef INCLUDED_Slalom_h_
 #define INCLUDED_Slalom_h_
 
-#include "Run.h"
+#include "Controller.h"
 
 /* 関数プロトタイプ宣言 */
-void Slalom_task();
+void section_Slalom();
+
 void Slalom_run(int8_t power, int16_t turn, float distance);
 
 #endif
